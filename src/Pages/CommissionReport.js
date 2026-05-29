@@ -25,7 +25,7 @@ const CommissionReport = () => {
 
   // Tax constants
   const GST_RATE = 18;
-  const TDS_RATE = 0.5;
+  const TDS_RATE = 1;
 
   // Filters and search
   const [startDate, setStartDate] = useState("");
@@ -85,34 +85,34 @@ const CommissionReport = () => {
         const res = await fetch(`https://api.vegiffy.in/api/vendor/restaurantorders/${vendorId}`);
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
-        
+
         if (data.success) {
           // Filter only delivered orders
-          const deliveredOrders = data.data.filter(order => 
-            order.orderStatus === "Delivered" || 
+          const deliveredOrders = data.data.filter(order =>
+            order.orderStatus === "Delivered" ||
             order.orderStatus === "delivered"
           );
 
           // Map orders with ALL calculations - ONLY customer name shown
           const processedOrders = deliveredOrders.map((order) => {
             const subTotal = order.subTotal || 0;
-            
+
             // Step 1: Commission to Vegiffy (20% of subtotal)
             const commissionAmount = (subTotal * restaurantCommission) / 100;
-            
+
             // Step 2: GST on commission (18% of commission)
             const gstOnCommission = (commissionAmount * GST_RATE) / 100;
-            
+
             // Step 3: Vendor's gross earning (subtotal - commission)
             const vendorGrossEarning = subTotal - commissionAmount;
-            
+
             // Step 4: TDS on vendor earning (0.5% of vendorGrossEarning)
             const tdsOnVendorEarning = (vendorGrossEarning * TDS_RATE) / 100;
-            
+
             // Step 5: 🔥 FIXED: Net payable = subtotal - commission - GST - TDS
             // Using toFixed(2) and parseFloat to avoid floating point issues
             const netPayable = parseFloat((subTotal - commissionAmount - gstOnCommission - tdsOnVendorEarning).toFixed(2));
-            
+
             return {
               orderId: order._id,
               orderDate: new Date(order.createdAt).toISOString().split("T")[0],
@@ -120,24 +120,24 @@ const CommissionReport = () => {
               customerName: `${order.userId?.firstName || "N/A"} ${order.userId?.lastName || ""}`,
               // Phone and email are intentionally excluded
               restaurantName: order.restaurantId?.restaurantName || "N/A",
-              
+
               // Order amounts
               subTotal: subTotal,
               deliveryCharge: order.deliveryCharge || 0,
               couponDiscount: order.couponDiscount || 0,
-              
+
               // Commission calculations
               commissionPercent: restaurantCommission,
               commissionAmount: parseFloat(commissionAmount.toFixed(2)),
-              
+
               // Vendor calculations
               vendorGrossEarning: parseFloat(vendorGrossEarning.toFixed(2)),
-              
+
               // Tax calculations
               gstOnCommission: parseFloat(gstOnCommission.toFixed(2)),
               tdsOnVendorEarning: parseFloat(tdsOnVendorEarning.toFixed(2)),
               netPayable: netPayable,
-              
+
               // Payment info
               paymentMethod: order.paymentMethod || "N/A",
               paymentStatus: order.paymentStatus || "N/A",
@@ -148,7 +148,7 @@ const CommissionReport = () => {
 
           setOrders(processedOrders);
           setFilteredOrders(processedOrders);
-          
+
           // Calculate summary with all taxes
           calculateSummary(processedOrders);
         } else {
@@ -174,8 +174,8 @@ const CommissionReport = () => {
     const totalGST = orderList.reduce((sum, order) => sum + order.gstOnCommission, 0);
     const totalTDS = orderList.reduce((sum, order) => sum + order.tdsOnVendorEarning, 0);
     const totalNetPayable = orderList.reduce((sum, order) => sum + order.netPayable, 0);
-    
-    const averageCommissionPercent = totalSubtotal > 0 
+
+    const averageCommissionPercent = totalSubtotal > 0
       ? parseFloat((totalCommission / totalSubtotal * 100).toFixed(2))
       : 0;
 
@@ -190,6 +190,8 @@ const CommissionReport = () => {
       averageCommissionPercent
     });
   };
+
+  console.log(summary);
 
   // Apply filters
   useEffect(() => {
@@ -237,21 +239,21 @@ const CommissionReport = () => {
       "Date": order.orderDate,
       "Customer Name": order.customerName,
       "Restaurant": order.restaurantName,
-      
+
       "Subtotal (₹)": order.subTotal,
       "Delivery Charge (₹)": order.deliveryCharge,
       "Coupon Discount (₹)": order.couponDiscount,
-      
+
       "Commission %": order.commissionPercent,
       "Commission Amount (₹)": order.commissionAmount,
-      
+
       "Vendor Gross (₹)": order.vendorGrossEarning,
-      
+
       "GST on Commission (₹)": order.gstOnCommission,
       "TDS on Vendor (₹)": order.tdsOnVendorEarning,
-      
+
       "Net Payable to Vendor (₹)": order.netPayable,
-      
+
       "Payment Method": order.paymentMethod,
       "Payment Status": order.paymentStatus,
       "Order Status": order.status
@@ -280,40 +282,40 @@ const CommissionReport = () => {
     const ws = XLSX.utils.json_to_sheet([...dataForExport, summaryRow]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "CommissionReport");
-    
+
     XLSX.writeFile(wb, `Commission_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   // Generate PDF Report
   const generatePDFReport = () => {
     const doc = new jsPDF();
-    
+
     // Header
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
     doc.setTextColor(34, 197, 94);
     doc.text("Commission & Tax Report", 105, 20, { align: "center" });
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: "center" });
-    
+
     // Tax Rates Info
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 255);
     doc.text(`Tax Rates: GST @${GST_RATE}% on Commission | TDS @${TDS_RATE}% on Vendor Earnings`, 105, 35, { align: "center" });
-    
+
     // Summary Section
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text("Summary Report", 20, 48);
-    
+
     doc.setLineWidth(0.5);
     doc.line(20, 51, 190, 51);
-    
+
     let y = 63;
     doc.setFontSize(10);
-    
+
     // Summary table
     const summaryData = [
       ["Total Orders", summary.totalOrders.toString()],
@@ -323,7 +325,7 @@ const CommissionReport = () => {
       ["Total TDS", `₹${summary.totalTDS.toFixed(2)}`],
       ["NET PAYABLE TO VENDOR", `₹${summary.netPayable.toFixed(2)}`, true]
     ];
-    
+
     summaryData.forEach(([label, value, isBold]) => {
       doc.setFont("helvetica", isBold ? "bold" : "normal");
       if (label.includes("NET")) {
@@ -335,9 +337,9 @@ const CommissionReport = () => {
       doc.text(value, 120, y);
       y += 8;
     });
-    
+
     y += 10;
-    
+
     // Detailed Orders
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
@@ -346,7 +348,7 @@ const CommissionReport = () => {
     doc.setLineWidth(0.3);
     doc.line(20, y, 190, y);
     y += 10;
-    
+
     // Table headers
     const headers = ["Order ID", "Date", "Customer", "Subtotal", "Comm", "GST", "Vendor Gross", "TDS", "Net"];
     let x = 20;
@@ -356,18 +358,18 @@ const CommissionReport = () => {
       doc.text(header, x, y);
       x += header === "Order ID" ? 25 : header === "Customer" ? 20 : 18;
     });
-    
+
     y += 7;
     doc.line(20, y, 190, y);
     y += 5;
-    
+
     // Order rows
     filteredOrders.slice(0, 20).forEach((order, index) => {
       if (y > 270) {
         doc.addPage();
         y = 20;
       }
-      
+
       x = 20;
       const rowData = [
         order.orderId.substring(0, 6) + "...",
@@ -380,11 +382,11 @@ const CommissionReport = () => {
         `₹${order.tdsOnVendorEarning.toFixed(2)}`,
         `₹${order.netPayable.toFixed(2)}`
       ];
-      
+
       rowData.forEach((cell, cellIndex) => {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6);
-        
+
         // Color coding
         if (cellIndex === 4) doc.setTextColor(220, 38, 38);
         else if (cellIndex === 5) doc.setTextColor(59, 130, 246);
@@ -392,19 +394,19 @@ const CommissionReport = () => {
         else if (cellIndex === 7) doc.setTextColor(249, 115, 22);
         else if (cellIndex === 8) doc.setTextColor(0, 0, 0);
         else doc.setTextColor(0, 0, 0);
-        
+
         doc.text(cell, x, y);
         x += cellIndex === 0 ? 25 : cellIndex === 2 ? 20 : 18;
       });
-      
+
       y += 5;
     });
-    
+
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text(`Page 1 • Total Orders: ${filteredOrders.length} • Commission Rate: ${restaurantCommission}% • GST: ${GST_RATE}% • TDS: ${TDS_RATE}%`, 105, 285, { align: "center" });
-    
+
     doc.save(`Tax_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -420,7 +422,7 @@ const CommissionReport = () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
+
     setStartDate(firstDay.toISOString().split('T')[0]);
     setEndDate(lastDay.toISOString().split('T')[0]);
   };
@@ -430,7 +432,7 @@ const CommissionReport = () => {
     const now = new Date();
     const lastWeek = new Date(now);
     lastWeek.setDate(now.getDate() - 6);
-    
+
     setStartDate(lastWeek.toISOString().split('T')[0]);
     setEndDate(now.toISOString().split('T')[0]);
   };
@@ -494,7 +496,7 @@ const CommissionReport = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -506,7 +508,7 @@ const CommissionReport = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">

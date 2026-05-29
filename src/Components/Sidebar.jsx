@@ -1337,7 +1337,7 @@ const Sidebar = ({ isCollapsed, isMobile }) => {
                 Need Help?
               </p>
               <p className="text-gray-600 text-xs mt-1">
-                Contact Support: vendor@vegiffy.in
+                Contact Support: vendor@vegiffy.com
               </p>
               <div className="flex justify-center space-x-3 mt-2">
                 <button className="text-gray-500 hover:text-green-600 transition-all duration-200 hover:scale-110">

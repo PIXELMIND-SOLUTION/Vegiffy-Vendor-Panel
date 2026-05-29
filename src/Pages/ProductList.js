@@ -1,18 +1,69 @@
 import React, { useEffect, useState } from "react";
-import { 
-  FaEdit, 
-  FaTrashAlt, 
-  FaEye, 
-  FaStar, 
-  FaRupeeSign, 
-  FaMapMarkerAlt, 
-  FaTag, 
-  FaSearch, 
-  FaTimes, 
+import {
+  FaEdit,
+  FaTrashAlt,
+  FaEye,
+  FaStar,
+  FaRupeeSign,
+  FaMapMarkerAlt,
+  FaTag,
+  FaSearch,
+  FaTimes,
   FaSave,
   FaSpinner
 } from "react-icons/fa";
 import axios from "axios";
+
+// ✅ Moved OUTSIDE ProductList to prevent re-creation on every render
+const StatusSlider = ({ product, updatingStatus, onToggle }) => {
+  const isActive = product.recommendedItem?.status === "active";
+  const isUpdating = updatingStatus[product.productId];
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => !isUpdating && onToggle(product)}
+        disabled={isUpdating}
+        className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${
+          isActive ? "bg-green-500" : "bg-gray-300"
+        } ${isUpdating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      >
+        <span
+          className={`inline-block w-3 h-3 transform transition-transform bg-white rounded-full ${
+            isActive ? "translate-x-5" : "translate-x-1"
+          }`}
+        />
+      </button>
+      {isUpdating && <FaSpinner className="animate-spin text-xs text-gray-500" />}
+    </div>
+  );
+};
+
+// ✅ Moved OUTSIDE ProductList to prevent re-creation on every render
+const getTypeBadge = (type) => {
+  const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+
+  const typeConfig = {
+    veg: { color: "bg-green-100 text-green-800", icon: "🌱" },
+    nonveg: { color: "bg-red-100 text-red-800", icon: "🍗" },
+    vegan: { color: "bg-emerald-100 text-emerald-800", icon: "🥬" },
+  };
+
+  const firstType = typeArray[0]?.toLowerCase();
+  const config = typeConfig[firstType] || {
+    color: "bg-gray-100 text-gray-800",
+    icon: "🍽️",
+  };
+
+  return (
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.color} flex items-center gap-1 w-fit`}
+    >
+      <span>{config.icon}</span>
+      {typeArray.join(", ")}
+    </span>
+  );
+};
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -32,13 +83,14 @@ const ProductList = () => {
 
   const vendorId = localStorage.getItem("vendorId");
 
-  // Fetch data on mount
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError("");
       try {
-        const res = await axios.get(`https://api.vegiffy.in/api/restaurant-products/${vendorId}`);
+        const res = await axios.get(
+          `https://api.vegiffy.in/api/restaurant-products/${vendorId}`
+        );
         if (res.data.success) {
           const productsData = res.data.recommendedProducts || [];
           setProducts(productsData);
@@ -77,16 +129,24 @@ const ProductList = () => {
     }
   };
 
-  // Filter products based on search term
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredProducts(products);
     } else {
-      const filtered = products.filter(product =>
-        product.recommendedItem?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.recommendedItem?.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.locationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.type?.some(t => t?.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = products.filter(
+        (product) =>
+          product.recommendedItem?.name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          product.recommendedItem?.content
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          product.locationName
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          product.type?.some((t) =>
+            t?.toLowerCase().includes(searchTerm.toLowerCase())
+          )
       );
       setFilteredProducts(filtered);
     }
@@ -98,17 +158,17 @@ const ProductList = () => {
 
   const handleEdit = (product) => {
     const productCopy = JSON.parse(JSON.stringify(product));
-    
+
     if (!productCopy.type) {
       productCopy.type = [];
     } else if (!Array.isArray(productCopy.type)) {
       productCopy.type = [productCopy.type];
     }
-    
+
     if (!productCopy.recommendedItem) {
       productCopy.recommendedItem = {};
     }
-    
+
     setEditingProduct(productCopy);
   };
 
@@ -131,19 +191,24 @@ const ProductList = () => {
         `https://api.vegiffy.in/api/restaurant-products/${productId}/${recommendedId}`
       );
       if (response.data.success) {
-        setProducts(products.filter(p => p.productId !== productId));
-        setFilteredProducts(filteredProducts.filter(p => p.productId !== productId));
+        setProducts((prev) => prev.filter((p) => p.productId !== productId));
+        setFilteredProducts((prev) =>
+          prev.filter((p) => p.productId !== productId)
+        );
         alert("Product deleted successfully!");
       }
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("Failed to delete product: " + (error.response?.data?.message || error.message));
+      alert(
+        "Failed to delete product: " +
+          (error.response?.data?.message || error.message)
+      );
     } finally {
       setDeleteLoading(null);
     }
   };
 
-  // Status toggle handler
+  // ✅ Uses recommendedItem._id as the unique key for status updates
   const handleStatusToggle = async (product) => {
     const productId = product.productId;
     const recommendedId = product.recommendedItem?._id;
@@ -155,12 +220,12 @@ const ProductList = () => {
       return;
     }
 
-    setUpdatingStatus(prev => ({ ...prev, [productId]: true }));
+    // ✅ Key by recommendedId (unique) instead of productId (may be shared)
+    setUpdatingStatus((prev) => ({ ...prev, [recommendedId]: true }));
 
     try {
       const formData = new FormData();
-      const recommendedData = { status: newStatus };
-      formData.append("recommended", JSON.stringify(recommendedData));
+      formData.append("recommended", JSON.stringify({ status: newStatus }));
 
       const response = await axios.put(
         `https://api.vegiffy.in/api/restaurant-product/${productId}/${recommendedId}`,
@@ -169,26 +234,26 @@ const ProductList = () => {
       );
 
       if (response.data.success) {
-        setProducts(prevProducts => 
-          prevProducts.map(p => 
-            p.productId === productId 
+        const updater = (list) =>
+          list.map((p) =>
+            p.recommendedItem?._id === recommendedId
               ? { ...p, recommendedItem: { ...p.recommendedItem, status: newStatus } }
               : p
-          )
-        );
-        setFilteredProducts(prevFiltered => 
-          prevFiltered.map(p => 
-            p.productId === productId 
-              ? { ...p, recommendedItem: { ...p.recommendedItem, status: newStatus } }
-              : p
-          )
+          );
+        setProducts(updater);
+        setFilteredProducts(updater);
+        // ✅ Keep view modal in sync
+        setSelectedProduct((prev) =>
+          prev?.recommendedItem?._id === recommendedId
+            ? { ...prev, recommendedItem: { ...prev.recommendedItem, status: newStatus } }
+            : prev
         );
       }
     } catch (error) {
       console.error("Error updating status:", error);
       alert("Failed to update status");
     } finally {
-      setUpdatingStatus(prev => ({ ...prev, [productId]: false }));
+      setUpdatingStatus((prev) => ({ ...prev, [recommendedId]: false }));
     }
   };
 
@@ -199,17 +264,17 @@ const ProductList = () => {
     setUpdateLoading(true);
     try {
       const formData = new FormData();
-      
+
       const productId = editingProduct.productId;
       const recommendedId = editingProduct.recommendedItem?._id;
-      
+
       if (!productId || !recommendedId) {
         alert("Product ID or Recommended ID not found");
         setUpdateLoading(false);
         return;
       }
 
-      const originalProduct = products.find(p => p.productId === productId);
+      const originalProduct = products.find((p) => p.productId === productId);
       if (!originalProduct) {
         alert("Product not found");
         setUpdateLoading(false);
@@ -219,32 +284,49 @@ const ProductList = () => {
       const originalRecommended = originalProduct.recommendedItem || {};
 
       const recommendedData = {
-        name: editingProduct.recommendedItem?.name || originalRecommended.name,
-        price: editingProduct.recommendedItem?.price || originalRecommended.price,
-        halfPlatePrice: editingProduct.recommendedItem?.halfPlatePrice || originalRecommended.halfPlatePrice,
-        fullPlatePrice: editingProduct.recommendedItem?.fullPlatePrice || originalRecommended.fullPlatePrice,
-        discount: editingProduct.recommendedItem?.discount || originalRecommended.discount,
-        content: editingProduct.recommendedItem?.content || originalRecommended.content,
-        preparationTime: editingProduct.recommendedItem?.preparationTime || originalRecommended.preparationTime,
-        status: editingProduct.recommendedItem?.status || originalRecommended.status,
+        name:
+          editingProduct.recommendedItem?.name || originalRecommended.name,
+        price:
+          editingProduct.recommendedItem?.price || originalRecommended.price,
+        halfPlatePrice:
+          editingProduct.recommendedItem?.halfPlatePrice ||
+          originalRecommended.halfPlatePrice,
+        fullPlatePrice:
+          editingProduct.recommendedItem?.fullPlatePrice ||
+          originalRecommended.fullPlatePrice,
+        discount:
+          editingProduct.recommendedItem?.discount ||
+          originalRecommended.discount,
+        content:
+          editingProduct.recommendedItem?.content ||
+          originalRecommended.content,
+        preparationTime:
+          editingProduct.recommendedItem?.preparationTime ||
+          originalRecommended.preparationTime,
+        status:
+          editingProduct.recommendedItem?.status || originalRecommended.status,
       };
 
       if (editingProduct.recommendedItem?.tags) {
-        recommendedData.tags = Array.isArray(editingProduct.recommendedItem.tags) 
-          ? editingProduct.recommendedItem.tags 
+        recommendedData.tags = Array.isArray(editingProduct.recommendedItem.tags)
+          ? editingProduct.recommendedItem.tags
           : [editingProduct.recommendedItem.tags];
       }
 
       if (editingProduct.recommendedItem?.category) {
-        recommendedData.category = typeof editingProduct.recommendedItem.category === 'object'
-          ? editingProduct.recommendedItem.category._id
-          : editingProduct.recommendedItem.category;
+        recommendedData.category =
+          typeof editingProduct.recommendedItem.category === "object"
+            ? editingProduct.recommendedItem.category._id
+            : editingProduct.recommendedItem.category;
       }
 
       formData.append("recommended", JSON.stringify(recommendedData));
-      
-      if (JSON.stringify(editingProduct.type) !== JSON.stringify(originalProduct.type)) {
-        formData.append('type', JSON.stringify(editingProduct.type));
+
+      if (
+        JSON.stringify(editingProduct.type) !==
+        JSON.stringify(originalProduct.type)
+      ) {
+        formData.append("type", JSON.stringify(editingProduct.type));
       }
 
       if (editingProduct.recommendedItem?.newImage) {
@@ -260,7 +342,7 @@ const ProductList = () => {
       if (response.data.success) {
         const updatedProduct = response.data.data;
         const updatedRecommendedItem = updatedProduct.recommended?.find(
-          item => item._id === recommendedId
+          (item) => item._id === recommendedId
         );
 
         if (updatedRecommendedItem) {
@@ -270,18 +352,28 @@ const ProductList = () => {
             recommendedItem: {
               ...originalRecommended,
               ...updatedRecommendedItem,
-              category: typeof updatedRecommendedItem.category === 'string' && typeof originalRecommended.category === 'object'
-                ? originalRecommended.category
-                : updatedRecommendedItem.category
-            }
+              category:
+                typeof updatedRecommendedItem.category === "string" &&
+                typeof originalRecommended.category === "object"
+                  ? originalRecommended.category
+                  : updatedRecommendedItem.category,
+            },
           };
 
-          setProducts(products.map(p => 
-            p.productId === productId ? updatedProductData : p
-          ));
-          setFilteredProducts(filteredProducts.map(p => 
-            p.productId === productId ? updatedProductData : p
-          ));
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.productId === productId && p.recommendedItem?._id === recommendedId
+                ? updatedProductData
+                : p
+            )
+          );
+          setFilteredProducts((prev) =>
+            prev.map((p) =>
+              p.productId === productId && p.recommendedItem?._id === recommendedId
+                ? updatedProductData
+                : p
+            )
+          );
         }
 
         setEditingProduct(null);
@@ -289,29 +381,32 @@ const ProductList = () => {
       }
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("Failed to update product: " + (error.response?.data?.message || error.message));
+      alert(
+        "Failed to update product: " +
+          (error.response?.data?.message || error.message)
+      );
     } finally {
       setUpdateLoading(false);
     }
   };
 
   const handleEditChange = (field, value) => {
-    setEditingProduct(prev => ({ ...prev, [field]: value }));
+    setEditingProduct((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleRecommendedItemChange = (field, value) => {
-    setEditingProduct(prev => ({
+    setEditingProduct((prev) => ({
       ...prev,
-      recommendedItem: { ...prev.recommendedItem, [field]: value }
+      recommendedItem: { ...prev.recommendedItem, [field]: value },
     }));
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setEditingProduct(prev => ({
+      setEditingProduct((prev) => ({
         ...prev,
-        recommendedItem: { ...prev.recommendedItem, newImage: file }
+        recommendedItem: { ...prev.recommendedItem, newImage: file },
       }));
     }
   };
@@ -327,57 +422,11 @@ const ProductList = () => {
 
   const getCategoryName = (category) => {
     if (!category) return "";
-    if (typeof category === 'string') {
-      const foundCategory = categories.find(c => c._id === category);
+    if (typeof category === "string") {
+      const foundCategory = categories.find((c) => c._id === category);
       return foundCategory?.categoryName || category;
     }
     return category.categoryName || "";
-  };
-
-  // Status Slider Component
-  const StatusSlider = ({ product }) => {
-    const isActive = product.recommendedItem?.status === "active";
-    const isUpdating = updatingStatus[product.productId];
-
-    return (
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => !isUpdating && handleStatusToggle(product)}
-          disabled={isUpdating}
-          className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${
-            isActive ? 'bg-green-500' : 'bg-gray-300'
-          } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          <span
-            className={`inline-block w-3 h-3 transform transition-transform bg-white rounded-full ${
-              isActive ? 'translate-x-5' : 'translate-x-1'
-            }`}
-          />
-        </button>
-        {isUpdating && <FaSpinner className="animate-spin text-xs text-gray-500" />}
-      </div>
-    );
-  };
-
-  // Get Type Badge
-  const getTypeBadge = (type) => {
-    const typeArray = Array.isArray(type) ? type : (type ? [type] : []);
-    
-    const typeConfig = {
-      veg: { color: "bg-green-100 text-green-800", icon: "🌱" },
-      nonveg: { color: "bg-red-100 text-red-800", icon: "🍗" },
-      vegan: { color: "bg-emerald-100 text-emerald-800", icon: "🥬" }
-    };
-
-    const firstType = typeArray[0]?.toLowerCase();
-    const config = typeConfig[firstType] || { color: "bg-gray-100 text-gray-800", icon: "🍽️" };
-    
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.color} flex items-center gap-1 w-fit`}>
-        <span>{config.icon}</span>
-        {typeArray.join(", ")}
-      </span>
-    );
   };
 
   if (loading) {
@@ -398,7 +447,9 @@ const ProductList = () => {
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
             <FaTag className="text-red-500 text-sm" />
           </div>
-          <h3 className="text-base font-semibold text-red-800 mb-1">Error Loading Products</h3>
+          <h3 className="text-base font-semibold text-red-800 mb-1">
+            Error Loading Products
+          </h3>
           <p className="text-sm text-red-600 mb-3">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -413,7 +464,7 @@ const ProductList = () => {
 
   return (
     <div className="w-full">
-      {/* Header with Restaurant Info - Compact */}
+      {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -424,12 +475,14 @@ const ProductList = () => {
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
               <span className="flex items-center gap-1">
                 <span className="font-medium">Status:</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                  restaurantStatus === 'active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {restaurantStatus || 'Unknown'}
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                    restaurantStatus === "active"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {restaurantStatus || "Unknown"}
                 </span>
               </span>
               <span className="flex items-center gap-1">
@@ -449,7 +502,7 @@ const ProductList = () => {
         </div>
       </div>
 
-      {/* Search Filter - Compact */}
+      {/* Search */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-3">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
@@ -473,7 +526,7 @@ const ProductList = () => {
         </div>
       </div>
 
-      {/* Products Table - Compact */}
+      {/* Table */}
       {filteredProducts.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -483,7 +536,9 @@ const ProductList = () => {
             {searchTerm ? "No Products Found" : "No Products Available"}
           </h3>
           <p className="text-xs text-gray-500">
-            {searchTerm ? "Try adjusting your search" : "Add products to your menu"}
+            {searchTerm
+              ? "Try adjusting your search"
+              : "Add products to your menu"}
           </p>
         </div>
       ) : (
@@ -492,18 +547,33 @@ const ProductList = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Product
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Type
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Price
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Rating
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
-                  <tr key={product.recommendedItem?._id || product._id} className="hover:bg-gray-50">
-                    {/* Product Info - Compact */}
+                  // ✅ Key by unique recommendedItem._id, not productId (which may be shared)
+                  <tr
+                    key={product.recommendedItem?._id}
+                    className="hover:bg-gray-50"
+                  >
                     <td className="px-3 py-2">
                       <div className="flex items-center">
                         <img
@@ -511,28 +581,30 @@ const ProductList = () => {
                           src={product.recommendedItem?.image}
                           alt={product.recommendedItem?.name}
                           onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/32x32/f3f4f6/9ca3af?text=🍽️";
+                            e.target.src =
+                              "https://via.placeholder.com/32x32/f3f4f6/9ca3af?text=🍽️";
                           }}
                         />
                         <div className="ml-2">
                           <div className="text-xs font-medium text-gray-900">
-                            {product.recommendedItem?.name?.substring(0, 15) || "Unnamed"}
-                            {product.recommendedItem?.name?.length > 15 && "..."}
+                            {product.recommendedItem?.name?.substring(0, 15) ||
+                              "Unnamed"}
+                            {product.recommendedItem?.name?.length > 15 &&
+                              "..."}
                           </div>
                           <div className="text-xs text-gray-500 flex items-center gap-1">
                             <FaMapMarkerAlt className="text-gray-400 text-[10px]" />
-                            {product.locationName?.substring(0, 10) || "Unknown"}
+                            {product.locationName?.substring(0, 10) ||
+                              "Unknown"}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Type - Compact */}
                     <td className="px-3 py-2">
                       {getTypeBadge(product.type)}
                     </td>
 
-                    {/* Price - Compact */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-0.5 text-xs font-medium text-gray-900">
                         <FaRupeeSign className="text-gray-500 text-[10px]" />
@@ -540,7 +612,6 @@ const ProductList = () => {
                       </div>
                     </td>
 
-                    {/* Rating - Compact */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-0.5">
                         <FaStar className="text-yellow-400 text-[10px]" />
@@ -550,12 +621,15 @@ const ProductList = () => {
                       </div>
                     </td>
 
-                    {/* Status - Compact */}
                     <td className="px-3 py-2">
-                      <StatusSlider product={product} />
+                      {/* ✅ Pass updatingStatus and onToggle as props */}
+                      <StatusSlider
+                        product={product}
+                        updatingStatus={updatingStatus}
+                        onToggle={handleStatusToggle}
+                      />
                     </td>
 
-                    {/* Actions - Compact */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
                         <button
@@ -594,14 +668,22 @@ const ProductList = () => {
         </div>
       )}
 
-      {/* View Product Modal - Compact */}
+      {/* View Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={closeModal} />
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeModal}
+          />
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto z-10 relative">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-3 flex justify-between items-center">
-              <h3 className="text-base font-bold text-gray-900">Product Details</h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-base font-bold text-gray-900">
+                Product Details
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <FaTimes />
               </button>
             </div>
@@ -614,19 +696,29 @@ const ProductList = () => {
                   alt={selectedProduct.recommendedItem?.name}
                 />
                 <div>
-                  <h4 className="text-base font-semibold">{selectedProduct.recommendedItem?.name}</h4>
-                  <p className="text-xs text-gray-500">{selectedProduct.locationName}</p>
+                  <h4 className="text-base font-semibold">
+                    {selectedProduct.recommendedItem?.name}
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    {selectedProduct.locationName}
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-gray-500">Price</p>
-                  <p className="font-medium">₹{selectedProduct.recommendedItem?.price}</p>
+                  <p className="font-medium">
+                    ₹{selectedProduct.recommendedItem?.price}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Status</p>
-                  <StatusSlider product={selectedProduct} />
+                  <StatusSlider
+                    product={selectedProduct}
+                    updatingStatus={updatingStatus}
+                    onToggle={handleStatusToggle}
+                  />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Type</p>
@@ -634,14 +726,17 @@ const ProductList = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Prep Time</p>
-                  <p className="font-medium">{selectedProduct.recommendedItem?.preparationTime || 0} mins</p>
+                  <p className="font-medium">
+                    {selectedProduct.recommendedItem?.preparationTime || 0} mins
+                  </p>
                 </div>
               </div>
 
               <div>
                 <p className="text-xs text-gray-500 mb-1">Description</p>
                 <p className="text-sm bg-gray-50 p-2 rounded">
-                  {selectedProduct.recommendedItem?.content || "No description"}
+                  {selectedProduct.recommendedItem?.content ||
+                    "No description"}
                 </p>
               </div>
             </div>
@@ -658,15 +753,24 @@ const ProductList = () => {
         </div>
       )}
 
-      {/* Edit Product Modal - Compact */}
+      {/* Edit Modal */}
       {editingProduct && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={closeModal} />
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeModal}
+          />
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[80vh] overflow-y-auto z-10 relative">
             <form onSubmit={handleUpdate}>
               <div className="sticky top-0 bg-white border-b border-gray-200 p-3 flex justify-between items-center">
-                <h3 className="text-base font-bold text-gray-900">Edit Product</h3>
-                <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <h3 className="text-base font-bold text-gray-900">
+                  Edit Product
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
                   <FaTimes />
                 </button>
               </div>
@@ -675,57 +779,92 @@ const ProductList = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Basic Info */}
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold border-b pb-1">Basic Info</h4>
-                    
+                    <h4 className="text-sm font-semibold border-b pb-1">
+                      Basic Info
+                    </h4>
+
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Name *</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Name *
+                      </label>
                       <input
                         type="text"
                         value={editingProduct.recommendedItem?.name || ""}
-                        onChange={(e) => handleRecommendedItemChange("name", e.target.value)}
+                        onChange={(e) =>
+                          handleRecommendedItemChange("name", e.target.value)
+                        }
                         className="w-full p-1.5 text-sm border rounded focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Price (₹) *</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Price (₹) *
+                      </label>
                       <input
                         type="number"
                         value={editingProduct.recommendedItem?.price || ""}
-                        onChange={(e) => handleRecommendedItemChange("price", e.target.value)}
+                        onChange={(e) =>
+                          handleRecommendedItemChange("price", e.target.value)
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Half Plate</label>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Half Plate
+                        </label>
                         <input
                           type="number"
-                          value={editingProduct.recommendedItem?.halfPlatePrice || ""}
-                          onChange={(e) => handleRecommendedItemChange("halfPlatePrice", e.target.value)}
+                          value={
+                            editingProduct.recommendedItem?.halfPlatePrice || ""
+                          }
+                          onChange={(e) =>
+                            handleRecommendedItemChange(
+                              "halfPlatePrice",
+                              e.target.value
+                            )
+                          }
                           className="w-full p-1.5 text-sm border rounded"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Full Plate</label>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Full Plate
+                        </label>
                         <input
                           type="number"
-                          value={editingProduct.recommendedItem?.fullPlatePrice || ""}
-                          onChange={(e) => handleRecommendedItemChange("fullPlatePrice", e.target.value)}
+                          value={
+                            editingProduct.recommendedItem?.fullPlatePrice || ""
+                          }
+                          onChange={(e) =>
+                            handleRecommendedItemChange(
+                              "fullPlatePrice",
+                              e.target.value
+                            )
+                          }
                           className="w-full p-1.5 text-sm border rounded"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Discount (%)</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Discount (%)
+                      </label>
                       <input
                         type="number"
                         min="0"
                         max="100"
                         value={editingProduct.recommendedItem?.discount || ""}
-                        onChange={(e) => handleRecommendedItemChange("discount", e.target.value)}
+                        onChange={(e) =>
+                          handleRecommendedItemChange(
+                            "discount",
+                            e.target.value
+                          )
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                       />
                     </div>
@@ -733,15 +872,27 @@ const ProductList = () => {
 
                   {/* Details */}
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold border-b pb-1">Details</h4>
+                    <h4 className="text-sm font-semibold border-b pb-1">
+                      Details
+                    </h4>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Category</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Category
+                      </label>
                       <select
-                        value={typeof editingProduct.recommendedItem?.category === 'object' 
-                          ? editingProduct.recommendedItem.category._id 
-                          : editingProduct.recommendedItem?.category || ""}
-                        onChange={(e) => handleRecommendedItemChange("category", e.target.value)}
+                        value={
+                          typeof editingProduct.recommendedItem?.category ===
+                          "object"
+                            ? editingProduct.recommendedItem.category._id
+                            : editingProduct.recommendedItem?.category || ""
+                        }
+                        onChange={(e) =>
+                          handleRecommendedItemChange(
+                            "category",
+                            e.target.value
+                          )
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                       >
                         <option value="">Select</option>
@@ -754,59 +905,102 @@ const ProductList = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Status</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Status
+                      </label>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          onClick={() => handleRecommendedItemChange("status", 
-                            editingProduct.recommendedItem?.status === "active" ? "inactive" : "active"
-                          )}
+                          onClick={() =>
+                            handleRecommendedItemChange(
+                              "status",
+                              editingProduct.recommendedItem?.status ===
+                                "active"
+                                ? "inactive"
+                                : "active"
+                            )
+                          }
                           className={`relative inline-flex items-center h-5 rounded-full w-9 ${
-                            editingProduct.recommendedItem?.status === 'active' ? 'bg-green-500' : 'bg-gray-300'
+                            editingProduct.recommendedItem?.status === "active"
+                              ? "bg-green-500"
+                              : "bg-gray-300"
                           }`}
                         >
                           <span
                             className={`inline-block w-3 h-3 transform transition-transform bg-white rounded-full ${
-                              editingProduct.recommendedItem?.status === 'active' ? 'translate-x-5' : 'translate-x-1'
+                              editingProduct.recommendedItem?.status === "active"
+                                ? "translate-x-5"
+                                : "translate-x-1"
                             }`}
                           />
                         </button>
                         <span className="text-xs">
-                          {editingProduct.recommendedItem?.status === 'active' ? 'Active' : 'Inactive'}
+                          {editingProduct.recommendedItem?.status === "active"
+                            ? "Active"
+                            : "Inactive"}
                         </span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Types *</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Types *
+                      </label>
                       <input
                         type="text"
-                        value={editingProduct.type ? editingProduct.type.join(", ") : ""}
-                        onChange={(e) => handleEditChange("type", e.target.value.split(",").map(t => t.trim()))}
+                        value={
+                          editingProduct.type
+                            ? editingProduct.type.join(", ")
+                            : ""
+                        }
+                        onChange={(e) =>
+                          handleEditChange(
+                            "type",
+                            e.target.value.split(",").map((t) => t.trim())
+                          )
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                         placeholder="veg, nonveg"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Tags</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Tags
+                      </label>
                       <input
                         type="text"
-                        value={Array.isArray(editingProduct.recommendedItem?.tags) 
-                          ? editingProduct.recommendedItem.tags.join(", ") 
-                          : editingProduct.recommendedItem?.tags || ""}
-                        onChange={(e) => handleRecommendedItemChange("tags", e.target.value.split(",").map(t => t.trim()))}
+                        value={
+                          Array.isArray(editingProduct.recommendedItem?.tags)
+                            ? editingProduct.recommendedItem.tags.join(", ")
+                            : editingProduct.recommendedItem?.tags || ""
+                        }
+                        onChange={(e) =>
+                          handleRecommendedItemChange(
+                            "tags",
+                            e.target.value.split(",").map((t) => t.trim())
+                          )
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                         placeholder="spicy, healthy"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Prep Time (mins)</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Prep Time (mins)
+                      </label>
                       <input
                         type="number"
-                        value={editingProduct.recommendedItem?.preparationTime || ""}
-                        onChange={(e) => handleRecommendedItemChange("preparationTime", e.target.value)}
+                        value={
+                          editingProduct.recommendedItem?.preparationTime || ""
+                        }
+                        onChange={(e) =>
+                          handleRecommendedItemChange(
+                            "preparationTime",
+                            e.target.value
+                          )
+                        }
                         className="w-full p-1.5 text-sm border rounded"
                       />
                     </div>
@@ -815,10 +1009,14 @@ const ProductList = () => {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Description</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Description
+                  </label>
                   <textarea
                     value={editingProduct.recommendedItem?.content || ""}
-                    onChange={(e) => handleRecommendedItemChange("content", e.target.value)}
+                    onChange={(e) =>
+                      handleRecommendedItemChange("content", e.target.value)
+                    }
                     rows="2"
                     className="w-full p-1.5 text-sm border rounded"
                   />
@@ -826,7 +1024,9 @@ const ProductList = () => {
 
                 {/* Image Upload */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Product Image</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Product Image
+                  </label>
                   <div className="flex items-center gap-3">
                     <img
                       src={editingProduct.recommendedItem?.image}
@@ -856,7 +1056,11 @@ const ProductList = () => {
                   disabled={updateLoading}
                   className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
                 >
-                  {updateLoading ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                  {updateLoading ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaSave />
+                  )}
                   Update
                 </button>
               </div>
