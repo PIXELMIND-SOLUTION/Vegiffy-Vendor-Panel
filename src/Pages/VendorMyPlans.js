@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FiCalendar, 
-  FiDollarSign, 
-  FiCheck, 
+import {
+  FiCalendar,
+  FiDollarSign,
+  FiCheck,
   FiClock,
   FiAward,
   FiUser,
@@ -14,6 +14,7 @@ import {
   FiFileText,
   FiImage,
   FiShield,
+  FiDownload,
 } from 'react-icons/fi';
 import { FaRupeeSign } from 'react-icons/fa';
 
@@ -72,7 +73,7 @@ const VendorMyPlans = () => {
 
   const formatPlanData = (plan) => {
     if (!plan) return null;
-    
+
     const purchaseDate = new Date(plan.planPurchaseDate || plan.purchaseDate);
     const expiryDate = new Date(plan.expiryDate);
     const now = new Date();
@@ -81,7 +82,7 @@ const VendorMyPlans = () => {
 
     // Check if it's bank transfer or razorpay
     const isBankTransfer = plan.transactionId?.startsWith('BANK_') || plan.paymentMethod === 'bank_transfer';
-    
+
     return {
       _id: plan._id || plan.id,
       planName: plan.planId?.name || 'Vendor Plan',
@@ -101,21 +102,22 @@ const VendorMyPlans = () => {
       daysRemaining: isActive ? daysRemaining : 0,
       isActive,
       vendorId: plan.vendorId,
-      
+
       // Bank Transfer Details
       bankDetails: plan.bankDetails || null,
       paymentScreenshot: plan.paymentScreenshot || null,
       screenshotUploadedAt: plan.screenshotUploadedAt || null,
       paymentMethod: isBankTransfer ? 'bank_transfer' : 'razorpay',
       isBankTransfer,
-      
+
       // Additional fields from response
       submittedAt: plan.submittedAt,
       verifiedAt: plan.verifiedAt,
       verifiedBy: plan.verifiedBy,
       addedBy: plan.addedBy,
       createdAt: plan.createdAt,
-      updatedAt: plan.updatedAt
+      updatedAt: plan.updatedAt,
+      note: plan.note
     };
   };
 
@@ -127,6 +129,169 @@ const VendorMyPlans = () => {
   const closePlanDetails = () => {
     setSelectedPlan(null);
     setShowPlanModal(false);
+  };
+
+  // Function to generate and download invoice PDF
+  const downloadInvoice = (plan) => {
+    // Create a hidden div for invoice content
+    const invoiceContent = document.createElement('div');
+    invoiceContent.style.position = 'absolute';
+    invoiceContent.style.top = '-9999px';
+    invoiceContent.style.left = '-9999px';
+    invoiceContent.style.width = '800px';
+    invoiceContent.style.padding = '40px';
+    invoiceContent.style.backgroundColor = '#ffffff';
+    invoiceContent.style.fontFamily = 'Arial, sans-serif';
+
+    // Format dates
+    const purchaseDateFormatted = plan.purchaseDate ? new Date(plan.purchaseDate).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) : 'N/A';
+
+    const expiryDateFormatted = plan.expiryDate ? new Date(plan.expiryDate).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) : 'N/A';
+
+    const submittedAtFormatted = plan.submittedAt ? new Date(plan.submittedAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) : 'N/A';
+
+    // Get vendor name from localStorage or use default
+    const vendorName = localStorage.getItem('vendorName') || 'Vendor';
+
+    invoiceContent.innerHTML = `
+      <div style="max-width: 800px; margin: 0 auto; background: white;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #3b82f6;">
+          <h1 style="color: #1f2937; font-size: 28px; margin: 0 0 5px 0;">VEGIFFY</h1>
+          <p style="color: #6b7280; margin: 0;">Vendor Plan Invoice</p>
+        </div>
+        
+        <!-- Invoice Info -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+          <div>
+            <h3 style="color: #374151; margin: 0 0 5px 0;">Invoice To:</h3>
+            <p style="margin: 0; color: #4b5563;">${vendorName}</p>
+            <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Vendor ID: ${plan.vendorId || 'N/A'}</p>
+          </div>
+          <div style="text-align: right;">
+            <h3 style="color: #374151; margin: 0 0 5px 0;">Invoice Details:</h3>
+            <p style="margin: 0; color: #4b5563;">Invoice #: ${plan.transactionId || 'N/A'}</p>
+            <p style="margin: 5px 0 0 0; color: #4b5563;">Date: ${purchaseDateFormatted}</p>
+          </div>
+        </div>
+        
+        <!-- Plan Details -->
+        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+          <h3 style="color: #374151; margin: 0 0 10px 0;">Plan Information</h3>
+          <div style="display: flex; justify-content: space-between;">
+            <div>
+              <p style="margin: 5px 0;"><strong>Plan Name:</strong> ${plan.planName}</p>
+              <p style="margin: 5px 0;"><strong>Validity:</strong> ${plan.validity} Days</p>
+              <p style="margin: 5px 0;"><strong>Status:</strong> ${plan.status === 'completed' ? 'Active' : plan.status}</p>
+            </div>
+            <div>
+              <p style="margin: 5px 0;"><strong>Purchase Date:</strong> ${purchaseDateFormatted}</p>
+              <p style="margin: 5px 0;"><strong>Expiry Date:</strong> ${expiryDateFormatted}</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Payment Breakdown -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <thead>
+            <tr style="background: #e5e7eb;">
+              <th style="padding: 12px; text-align: left; border: 1px solid #d1d5db;">Description</th>
+              <th style="padding: 12px; text-align: right; border: 1px solid #d1d5db;">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #d1d5db;">Base Plan Amount</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">₹${plan.baseAmount}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #d1d5db;">GST (18%)</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">₹${formatCurrency(plan.gstAmount)}</td>
+            </tr>
+            <tr style="background: #fef3c7;">
+              <td style="padding: 10px; border: 1px solid #d1d5db; font-weight: bold;">Total Amount</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db; font-weight: bold;">₹${plan.formattedTotalAmount}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Payment Method -->
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+          <h3 style="color: #374151; margin: 0 0 10px 0;">Payment Information</h3>
+          <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${plan.isBankTransfer ? 'Bank Transfer' : 'Online Payment (Razorpay)'}</p>
+          <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${plan.transactionId}</p>
+          ${plan.razorpayPaymentId ? `<p style="margin: 5px 0;"><strong>Razorpay Payment ID:</strong> ${plan.razorpayPaymentId}</p>` : ''}
+          <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${submittedAtFormatted}</p>
+        </div>
+        
+        <!-- Bank Details (if bank transfer) -->
+        ${plan.bankDetails ? `
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+          <h3 style="color: #374151; margin: 0 0 10px 0;">Bank Account Details</h3>
+          <p style="margin: 5px 0;"><strong>Account Name:</strong> ${plan.bankDetails.accountName}</p>
+          <p style="margin: 5px 0;"><strong>Account Number:</strong> ${plan.bankDetails.accountNumber}</p>
+          <p style="margin: 5px 0;"><strong>Bank Name:</strong> ${plan.bankDetails.bankName}</p>
+          <p style="margin: 5px 0;"><strong>IFSC Code:</strong> ${plan.bankDetails.ifscCode}</p>
+        </div>
+        ` : ''}
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px;">
+          <p>This is a system generated invoice and does not require a physical signature.</p>
+          <p>© ${new Date().getFullYear()} Vegiffy. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(invoiceContent);
+
+    // Use html2pdf if available, otherwise use browser print
+    if (window.html2pdf) {
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `Invoice_${plan.transactionId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      window.html2pdf().set(opt).from(invoiceContent).save().then(() => {
+        document.body.removeChild(invoiceContent);
+      });
+    } else {
+      // Fallback: Use browser print
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Invoice_${plan.transactionId}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+              @media print {
+                body { margin: 0; padding: 0; }
+              }
+            </style>
+          </head>
+          <body>${invoiceContent.innerHTML}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+      document.body.removeChild(invoiceContent);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -340,9 +505,9 @@ const VendorMyPlans = () => {
                   {plan.paymentScreenshot && (
                     <div className="mb-4">
                       <div className="text-xs text-gray-500 mb-1">Payment Screenshot</div>
-                      <div 
+                      <div
                         className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                        onClick={() => window.open(plan.paymentScreenshot, '_blank')}
+                        onClick={() => window.open(`https://api.vegiffy.in${plan.paymentScreenshot}`, '_blank')}
                       >
                         <div className="text-center">
                           <FiImage className="w-8 h-8 text-gray-400 mx-auto mb-1" />
@@ -352,14 +517,23 @@ const VendorMyPlans = () => {
                     </div>
                   )}
 
-                  {/* Action Button */}
-                  <button
-                    onClick={() => openPlanDetails(plan)}
-                    className="w-full mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-                  >
-                    <FiFileText className="w-4 h-4 mr-2" />
-                    View Complete Details
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openPlanDetails(plan)}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <FiFileText className="w-4 h-4 mr-2" />
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => downloadInvoice(plan)}
+                      className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <FiDownload className="w-4 h-4 mr-2" />
+                      Download Invoice
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -538,13 +712,13 @@ const VendorMyPlans = () => {
                             <h6 className="font-semibold text-gray-900">Payment Receipt</h6>
                           </div>
                           <div className="text-center">
-                            <div 
+                            <div
                               className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden cursor-pointer group"
                               onClick={() => window.open(selectedPlan.paymentScreenshot, '_blank')}
                             >
-                              <img 
-                                src={selectedPlan.paymentScreenshot} 
-                                alt="Payment Screenshot" 
+                              <img
+                                src={selectedPlan.paymentScreenshot}
+                                alt="Payment Screenshot"
                                 className="w-full h-full object-contain"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -611,8 +785,8 @@ const VendorMyPlans = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-end space-x-3">
-                  {selectedPlan.paymentScreenshot && (
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
+                  {/* {selectedPlan.paymentScreenshot && (
                     <button
                       onClick={() => window.open(selectedPlan.paymentScreenshot, '_blank')}
                       className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
@@ -620,11 +794,18 @@ const VendorMyPlans = () => {
                       <FiImage className="w-4 h-4 mr-2" />
                       View Receipt
                     </button>
-                  )}
+                  )} */}
+                  <button
+                    onClick={() => downloadInvoice(selectedPlan)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <FiDownload className="w-4 h-4 mr-2" />
+                    Download Invoice
+                  </button>
                   {!selectedPlan.isActive && selectedPlan.status === 'expired' && (
                     <button
                       onClick={() => window.location.href = '/vendor/payments'}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Renew Plan
                     </button>

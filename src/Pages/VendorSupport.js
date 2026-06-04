@@ -3,7 +3,7 @@ import { FaEnvelope, FaPhone, FaCopy, FaCheck, FaWhatsapp } from 'react-icons/fa
 
 const VendorSupport = () => {
   const [email, setEmail] = useState('info@vegiffy.com');
-  const [phone, setPhone] = useState('9391950503');
+  const [phone, setPhone] = useState('9550004150');
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
