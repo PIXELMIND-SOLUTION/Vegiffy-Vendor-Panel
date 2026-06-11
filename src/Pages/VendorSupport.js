@@ -1,12 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEnvelope, FaPhone, FaCopy, FaCheck, FaWhatsapp } from 'react-icons/fa';
 
 const VendorSupport = () => {
   const [email, setEmail] = useState('info@vegiffy.com');
   const [phone, setPhone] = useState('9550004150');
+  const [whatsappNumber, setWhatsappNumber] = useState('9550004150');
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch vendor credentials from API
+  useEffect(() => {
+    const fetchVendorCredentials = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://api.vegiffy.in/api/getallcredential');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch credentials');
+        }
+        
+        const data = await response.json();
+        
+        // Find the credential with type "vendor"
+        const vendorCredential = data.credentials?.find(
+          credential => credential.type === 'vendor'
+        );
+        
+        if (vendorCredential) {
+          // Update state with vendor credentials
+          setEmail(vendorCredential.email || email);
+          setPhone(vendorCredential.mobile || phone);
+          setWhatsappNumber(vendorCredential.whatsappNumber || vendorCredential.mobile || phone);
+        } else {
+          console.warn('No vendor credentials found in API response');
+          setError('Vendor support credentials not found');
+        }
+      } catch (err) {
+        console.error('Error fetching vendor credentials:', err);
+        setError('Failed to load support credentials');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVendorCredentials();
+  }, []);
 
   // Copy to clipboard functions
   const copyEmailToClipboard = () => {
@@ -82,13 +123,13 @@ Please help me resolve this issue.
 
 Thank you.`;
       
-      // Open WhatsApp in new tab
-      const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      // Open WhatsApp in new tab using whatsappNumber
+      const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
       window.open(whatsappLink, '_blank', 'noopener,noreferrer');
       
     } catch (error) {
       console.error('Error opening WhatsApp:', error);
-      alert(`Please WhatsApp us at: ${phone}`);
+      alert(`Please WhatsApp us at: ${whatsappNumber}`);
     }
   };
 
@@ -102,6 +143,18 @@ Thank you.`;
       alert(`Please call us at: ${phone}`);
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-600">Loading support information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
@@ -130,6 +183,14 @@ Thank you.`;
           {/* Content */}
           <div className="p-6">
             
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm">{error}</p>
+                <p className="text-yellow-600 text-xs mt-1">Using default contact information</p>
+              </div>
+            )}
+
             {/* Intro Text */}
             <div className="text-center mb-6">
               <p className="text-gray-700 font-medium">
