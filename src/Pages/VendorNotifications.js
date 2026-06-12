@@ -1,3 +1,4 @@
+import { MailOpen } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FiBell, 
@@ -13,7 +14,9 @@ import {
   FiTrash2,
   FiCheckSquare,
   FiSquare,
-  FiLoader
+  FiLoader,
+  FiMailOpen,
+  FiMail
 } from 'react-icons/fi';
 
 const VendorNotifications = () => {
@@ -26,10 +29,11 @@ const VendorNotifications = () => {
   // State for delete functionality
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
 
-  // Use useCallback to memoize the fetch function
+  // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
       setError(null);
@@ -41,7 +45,6 @@ const VendorNotifications = () => {
         return;
       }
 
-      // FIXED: Removed timestamp parameter
       const response = await fetch(`https://api.vegiffy.in/api/vendor/notification/${vendorId}`, {
         method: 'GET',
         headers: {
@@ -56,15 +59,11 @@ const VendorNotifications = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Sort by date (newest first)
         const sortedNotifications = (result.data || []).sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );
         
-        // Update notifications
         setNotifications(sortedNotifications);
-        
-        // Clear selected notifications if they no longer exist
         setSelectedNotifications(prev => 
           prev.filter(id => sortedNotifications.some(n => n._id === id))
         );
@@ -85,9 +84,104 @@ const VendorNotifications = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // DELETE NOTIFICATION FUNCTION - Single delete
+  // MARK SINGLE NOTIFICATION AS READ
+  const markAsRead = async (notificationId) => {
+    try {
+      setIsMarkingRead(true);
+      const vendorId = localStorage.getItem('vendorId');
+      
+      if (!vendorId) {
+        setError('Vendor ID not found');
+        return;
+      }
+
+      const response = await fetch(`https://api.vegiffy.in/api/vendor/notifications/${vendorId}/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        setNotifications(prev => prev.map(notification =>
+          notification._id === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        ));
+        
+        // Update selected notification if in modal
+        if (selectedNotification && selectedNotification._id === notificationId) {
+          setSelectedNotification(prev => ({ ...prev, isRead: true }));
+        }
+        
+        // Show success message
+        toastMessage('Notification marked as read', 'success');
+      } else {
+        setError(result.message || 'Failed to mark notification as read');
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      setError('Error marking notification as read. Please try again.');
+    } finally {
+      setIsMarkingRead(false);
+    }
+  };
+
+  // MARK ALL NOTIFICATIONS AS READ
+  const markAllAsRead = async () => {
+    if (unreadCount === 0) {
+      toastMessage('No unread notifications', 'info');
+      return;
+    }
+
+    try {
+      setIsMarkingRead(true);
+      const vendorId = localStorage.getItem('vendorId');
+      
+      if (!vendorId) {
+        setError('Vendor ID not found');
+        return;
+      }
+
+      const response = await fetch(`https://api.vegiffy.in/api/vendor/notifications/${vendorId}/read-all`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state - mark all as read
+        setNotifications(prev => prev.map(notification => ({
+          ...notification,
+          isRead: true
+        })));
+        
+        // Update selected notification if in modal
+        if (selectedNotification) {
+          setSelectedNotification(prev => ({ ...prev, isRead: true }));
+        }
+        
+        // Show success message
+        toastMessage('All notifications marked as read', 'success');
+      } else {
+        setError(result.message || 'Failed to mark notifications as read');
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      setError('Error marking notifications as read. Please try again.');
+    } finally {
+      setIsMarkingRead(false);
+    }
+  };
+
+  // DELETE NOTIFICATION - Single delete
   const deleteNotification = async (notificationId) => {
-    // Show confirmation
     if (!window.confirm('Are you sure you want to delete this notification?')) {
       return;
     }
@@ -115,19 +209,15 @@ const VendorNotifications = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Update local state - remove deleted notification
         setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
         
-        // Close modal if deleting the viewed notification
         if (selectedNotification && selectedNotification._id === notificationId) {
           closeNotificationDetails();
         }
         
-        // Remove from selected notifications if present
         setSelectedNotifications(prev => prev.filter(id => id !== notificationId));
         
-        // Show success message
-        alert(result.message || 'Notification deleted successfully');
+        toastMessage(result.message || 'Notification deleted successfully', 'success');
       } else {
         setError(result.message || 'Failed to delete notification');
       }
@@ -139,7 +229,7 @@ const VendorNotifications = () => {
     }
   };
 
-  // BULK DELETE FUNCTION - Delete multiple selected notifications
+  // BULK DELETE
   const deleteSelectedNotifications = async () => {
     if (selectedNotifications.length === 0) return;
 
@@ -166,22 +256,16 @@ const VendorNotifications = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Update local state - remove all selected notifications
         setNotifications(prev => prev.filter(notif => !selectedNotifications.includes(notif._id)));
-        
-        // Clear selected notifications
         setSelectedNotifications([]);
         
-        // Close modal if viewing a deleted notification
         if (selectedNotification && selectedNotifications.includes(selectedNotification._id)) {
           closeNotificationDetails();
         }
         
-        // Hide delete confirmation modal
         setShowDeleteConfirm(false);
         
-        // Show success message
-        alert(result.message || 'Notifications deleted successfully');
+        toastMessage(result.message || 'Notifications deleted successfully', 'success');
       } else {
         setError(result.message || 'Failed to delete notifications');
       }
@@ -193,18 +277,22 @@ const VendorNotifications = () => {
     }
   };
 
-  // SELECT/DESELECT ALL notifications
+  // Helper function for toast messages
+  const toastMessage = (message, type = 'info') => {
+    // Simple alert for now - you can replace with a proper toast library
+    alert(message);
+  };
+
+  // SELECT/DESELECT ALL
   const toggleSelectAll = () => {
     if (selectedNotifications.length === filteredNotifications.length) {
-      // Deselect all
       setSelectedNotifications([]);
     } else {
-      // Select all
       setSelectedNotifications(filteredNotifications.map(n => n._id));
     }
   };
 
-  // SELECT/DESELECT single notification
+  // SELECT/DESELECT single
   const toggleSelectNotification = (notificationId) => {
     setSelectedNotifications(prev => {
       if (prev.includes(notificationId)) {
@@ -215,7 +303,7 @@ const VendorNotifications = () => {
     });
   };
 
-  // Format notification type
+  // Get notification type info
   const getNotificationTypeInfo = (type) => {
     switch (type) {
       case 'order_placed':
@@ -296,6 +384,11 @@ const VendorNotifications = () => {
   const openNotificationDetails = (notification) => {
     setSelectedNotification(notification);
     setShowNotificationModal(true);
+    
+    // Auto-mark as read when opening details
+    if (!notification.isRead) {
+      markAsRead(notification._id);
+    }
   };
 
   const closeNotificationDetails = () => {
@@ -352,7 +445,7 @@ const VendorNotifications = () => {
           </div>
         )}
 
-        {/* Action Bar - REMOVED REFRESH BUTTON */}
+        {/* Action Bar */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1">
@@ -370,6 +463,22 @@ const VendorNotifications = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              {/* Mark All as Read Button */}
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  disabled={isMarkingRead}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {isMarkingRead ? (
+                    <FiLoader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MailOpen className="w-4 h-4" />
+                  )}
+                  <span>Mark All as Read ({unreadCount})</span>
+                </button>
+              )}
+              
               {/* Bulk Delete Button */}
               {selectedNotifications.length > 0 && (
                 <button
@@ -407,27 +516,39 @@ const VendorNotifications = () => {
           ) : (
             <div>
               {/* Select All Header */}
-              <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center">
-                <button
-                  onClick={toggleSelectAll}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
-                >
-                  {selectedNotifications.length === filteredNotifications.length ? (
-                    <FiCheckSquare className="w-5 h-5 text-blue-600" />
-                  ) : (
-                    <FiSquare className="w-5 h-5" />
+              <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
+                  >
+                    {selectedNotifications.length === filteredNotifications.length ? (
+                      <FiCheckSquare className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <FiSquare className="w-5 h-5" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {selectedNotifications.length === filteredNotifications.length 
+                        ? 'Deselect All' 
+                        : 'Select All'}
+                    </span>
+                  </button>
+                  {selectedNotifications.length > 0 && (
+                    <span className="ml-4 text-sm text-gray-500">
+                      {selectedNotifications.length} selected
+                    </span>
                   )}
-                  <span className="text-sm font-medium">
-                    {selectedNotifications.length === filteredNotifications.length 
-                      ? 'Deselect All' 
-                      : 'Select All'}
-                  </span>
-                </button>
-                {selectedNotifications.length > 0 && (
-                  <span className="ml-4 text-sm text-gray-500">
-                    {selectedNotifications.length} selected
-                  </span>
-                )}
+                </div>
+                
+                {/* Quick Stats */}
+                <div className="text-sm text-gray-500">
+                  {unreadCount > 0 && (
+                    <span className="flex items-center gap-1">
+                      <FiMail className="w-3 h-3" />
+                      {unreadCount} unread
+                    </span>
+                  )}
+                </div>
               </div>
               
               <div className="divide-y divide-gray-200">
@@ -439,7 +560,7 @@ const VendorNotifications = () => {
                   return (
                     <div 
                       key={notification._id} 
-                      className={`p-6 hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50' : ''} ${isSelected ? 'bg-blue-50' : ''}`}
+                      className={`p-6 hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50' : ''} ${isSelected ? 'bg-blue-100' : ''}`}
                     >
                       <div className="flex items-start justify-between">
                         {/* Checkbox for selection */}
@@ -461,7 +582,7 @@ const VendorNotifications = () => {
                             <TypeIcon className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
+                            <div className="flex items-center space-x-2 mb-1 flex-wrap gap-2">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>
                                 {typeInfo.label}
                               </span>
@@ -530,6 +651,18 @@ const VendorNotifications = () => {
                                 <span>View Details</span>
                               </button>
                               
+                              {/* Mark as Read Button (for unread notifications) */}
+                              {!notification.isRead && (
+                                <button
+                                  onClick={() => markAsRead(notification._id)}
+                                  disabled={isMarkingRead}
+                                  className="flex items-center space-x-1 text-green-600 hover:text-green-800 transition-colors text-sm"
+                                >
+                                  <MailOpen className="w-4 h-4" />
+                                  <span>Mark as Read</span>
+                                </button>
+                              )}
+                              
                               {/* Delete Button */}
                               <button
                                 onClick={() => deleteNotification(notification._id)}
@@ -575,7 +708,7 @@ const VendorNotifications = () => {
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
+                      <div className="flex items-center space-x-2 mb-2 flex-wrap gap-2">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getNotificationTypeInfo(selectedNotification.type).color}`}>
                           {getNotificationTypeInfo(selectedNotification.type).label}
                         </span>
@@ -585,6 +718,11 @@ const VendorNotifications = () => {
                         {!selectedNotification.isRead && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             Unread
+                          </span>
+                        )}
+                        {selectedNotification.isRead && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Read
                           </span>
                         )}
                       </div>
@@ -671,15 +809,6 @@ const VendorNotifications = () => {
                               </p>
                             </div>
                           )}
-                          
-                          {selectedNotification.data.timestamp && (
-                            <div className="md:col-span-2">
-                              <p className="text-sm text-gray-500">Timestamp</p>
-                              <p className="font-medium text-gray-900">
-                                {new Date(selectedNotification.data.timestamp).toLocaleString('en-IN')}
-                              </p>
-                            </div>
-                          )}
                         </div>
 
                         {/* Products List */}
@@ -730,6 +859,18 @@ const VendorNotifications = () => {
                 {/* Action Buttons */}
                 <div className="mt-6 flex justify-between">
                   <div className="flex space-x-3">
+                    {/* Mark as Read Button in Modal */}
+                    {!selectedNotification.isRead && (
+                      <button
+                        onClick={() => markAsRead(selectedNotification._id)}
+                        disabled={isMarkingRead}
+                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        <MailOpen className="w-4 h-4" />
+                        <span>Mark as Read</span>
+                      </button>
+                    )}
+                    
                     {/* Delete Button in Modal */}
                     <button
                       onClick={() => deleteNotification(selectedNotification._id)}

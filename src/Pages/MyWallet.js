@@ -335,13 +335,20 @@ const MyWallet = () => {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead><tr className="border-b border-gray-200"><th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Amount</th><th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th><th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Date</th><th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ID</th></tr></thead>
+                    <thead><tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Amount</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Reason</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ID</th>
+                    </tr></thead>
                     <tbody className="divide-y divide-gray-200">
                       {walletData.withdrawalRequests.map((request) => (
                         <tr key={request._id} className="hover:bg-gray-50">
                           <td className="py-4 px-4"><span className="font-medium text-gray-900">₹{request.amount?.toLocaleString()}</span></td>
                           <td className="py-4 px-4">{getStatusBadge(request.status)}</td>
                           <td className="py-4 px-4 text-sm text-gray-600">{formatDate(request.createdAt)}</td>
+                          <td className="py-4 px-4 text-sm text-gray-600">{request.reason || '-'}</td>
                           <td className="py-4 px-4"><span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">{request._id?.slice(-8) || ''}</span></td>
                         </tr>
                       ))}
