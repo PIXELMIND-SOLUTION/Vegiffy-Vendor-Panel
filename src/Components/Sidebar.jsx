@@ -111,7 +111,7 @@
 //         `https://api.vegiffy.in/api/vendor/myplan/${vendorId}`
 //       );
 
-//       console.log("Plan check response:", response.data);
+//       //console.log("Plan check response:", response.data);
 
 //       if (response.data.success && response.data.data) {
 //         const planData = response.data.data;
@@ -832,7 +832,7 @@ const Sidebar = ({ isCollapsed, isMobile }) => {
         `https://api.vegiffy.in/api/vendor/myplan/${vendorId}`
       );
 
-      console.log("Plan check response:", response.data);
+      ////console.log("Plan check response:", response.data);
 
       if (response.data.success && response.data.data) {
         const planData = response.data.data;

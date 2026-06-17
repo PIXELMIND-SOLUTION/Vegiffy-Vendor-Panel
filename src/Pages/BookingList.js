@@ -599,7 +599,7 @@ const BookingList = () => {
         requestBody.preparationTime = parseInt(preparationTime);
       }
 
-      console.log("Updating order:", editBooking.bookingId, "with data:", requestBody);
+      ////console.log("Updating order:", editBooking.bookingId, "with data:", requestBody);
 
       const res = await fetch(`https://api.vegiffy.in/api/acceptorder/${editBooking.bookingId}/${vendorId}`, {
         method: "PUT",
@@ -610,7 +610,7 @@ const BookingList = () => {
       });
 
       const data = await res.json();
-      console.log("Response from server:", data);
+      //console.log("Response from server:", data);
 
       if (data.success) {
         setBookings((prev) =>
@@ -630,7 +630,7 @@ const BookingList = () => {
         closeEditModal();
       } else {
         const errorMsg = data.message || "Failed to update order status";
-        console.log("Error from backend:", errorMsg);
+        //console.log("Error from backend:", errorMsg);
 
         setErrorMessage(errorMsg);
         setErrorDetails(data);
@@ -1031,13 +1031,36 @@ const BookingList = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
-                            <button
-                              title="Download Invoice"
-                              onClick={() => generateInvoicePDF(booking)}
-                              className="inline-flex items-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <FaFilePdf />
-                            </button>
+                            {booking.status !== 'Rejected' && (
+                              <>
+                                <button
+                                  title="Download Invoice"
+                                  onClick={() => generateInvoicePDF(booking)}
+                                  className="inline-flex items-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <FaFilePdf />
+                                </button>
+
+                                <button
+                                  title="Edit Status"
+                                  onClick={() => openEditModal(booking)}
+                                  className="inline-flex items-center p-2 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded-lg transition-colors"
+                                >
+                                  <FaEdit />
+                                </button>
+                                {storedRole === 'admin' && (
+                                  <button
+                                    title="Delete Order"
+                                    disabled={deleteLoading}
+                                    onClick={() => deleteOrder(booking.bookingId)}
+                                    className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${deleteLoading ? "opacity-50 cursor-not-allowed" : ""
+                                      }`}
+                                  >
+                                    <FaTrashAlt />
+                                  </button>
+                                )}
+                              </>
+                            )}
                             <button
                               title="View Details"
                               onClick={() => setViewBooking(booking)}
@@ -1045,24 +1068,6 @@ const BookingList = () => {
                             >
                               <FaEye />
                             </button>
-                            <button
-                              title="Edit Status"
-                              onClick={() => openEditModal(booking)}
-                              className="inline-flex items-center p-2 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded-lg transition-colors"
-                            >
-                              <FaEdit />
-                            </button>
-                            {storedRole === 'admin' && (
-                              <button
-                                title="Delete Order"
-                                disabled={deleteLoading}
-                                onClick={() => deleteOrder(booking.bookingId)}
-                                className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${deleteLoading ? "opacity-50 cursor-not-allowed" : ""
-                                  }`}
-                              >
-                                <FaTrashAlt />
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

@@ -83,13 +83,13 @@ const CategoryForm = () => {
         }
       });
 
-      console.log("📦 Sending form data to backend...");
+      //console.log("📦 Sending form data to backend...");
 
       const res = await axios.post("https://api.vegiffy.in/api/category", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      console.log("✅ API Response:", res.data);
+      //console.log("✅ API Response:", res.data);
       alert("🎉 Category created successfully!");
       navigate("/categorylist");
 

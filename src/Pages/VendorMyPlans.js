@@ -46,7 +46,7 @@ const VendorMyPlans = () => {
       const response = await fetch(`https://api.vegiffy.in/api/vendor/myplan/${vendorId}`);
       const result = await response.json();
 
-      console.log('API Response:', result); // Debug log
+      //console.log('API Response:', result); // Debug log
 
       // FIXED: Check for different success messages
       if (result.success) {
@@ -56,7 +56,7 @@ const VendorMyPlans = () => {
           const plansData = Array.isArray(result.data) ? result.data : [result.data];
           setPlans(plansData);
         } else {
-          console.log('No data in response');
+          //console.log('No data in response');
           setPlans([]);
         }
       } else {

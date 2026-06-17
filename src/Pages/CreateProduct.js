@@ -161,22 +161,22 @@ const CreateProductForm = () => {
     // Attach recommended images (only if they exist)
     recommended.forEach((item, index) => {
       if (item.imageFile) {
-        console.log(`📤 Appending recommended image ${index}:`, item.imageFile.name);
+        //console.log(`📤 Appending recommended image ${index}:`, item.imageFile.name);
         formData.append("recommendedImages", item.imageFile);
       }
     });
 
     // Debug FormData
-    console.log("=== 🚀 FORM DATA DEBUG ===");
-    console.log("📦 FormData contents:");
+    //console.log("=== 🚀 FORM DATA DEBUG ===");
+    //console.log("📦 FormData contents:");
     for (let [key, value] of formData.entries()) {
       if (value instanceof File) {
-        console.log(`📁 ${key}:`, value.name, `(${value.size} bytes)`, value.type);
+        //console.log(`📁 ${key}:`, value.name, `(${value.size} bytes)`, value.type);
       } else {
-        console.log(`📄 ${key}:`, value);
+        //console.log(`📄 ${key}:`, value);
       }
     }
-    console.log("=== 🎯 END DEBUG ===");
+    //console.log("=== 🎯 END DEBUG ===");
 
     try {
       setLoading(true);
@@ -187,7 +187,7 @@ const CreateProductForm = () => {
         timeout: 30000,
       });
 
-      console.log("✅ Success response:", response.data);
+      //console.log("✅ Success response:", response.data);
       
       if (response.data.success) {
         alert("🎉 Product created successfully!");

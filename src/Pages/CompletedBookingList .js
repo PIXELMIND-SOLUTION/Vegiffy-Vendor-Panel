@@ -78,7 +78,7 @@ const CompletedBookingList = () => {
         const res = await fetch(`https://api.vegiffy.in/api/vendor/restaurantorders/${vendorId}`);
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
-        console.log("API Response:", data); // Debugging
+        //console.log("API Response:", data); // Debugging
 
         if (data.success) {
           // FIXED: Sirf "Delivered" status filter
@@ -138,7 +138,7 @@ const CompletedBookingList = () => {
               };
             });
 
-          console.log("Mapped Bookings:", mappedBookings); // Debugging
+          //console.log("Mapped Bookings:", mappedBookings); // Debugging
           setBookings(mappedBookings);
           setFilteredBookings(mappedBookings);
         } else {

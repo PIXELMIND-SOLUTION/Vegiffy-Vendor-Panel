@@ -390,7 +390,7 @@
 //         prefill: razorpayPrefill,
 //         handler: async function (response) {
 //           try {
-//             console.log('🔄 UPI Payment Success:', response);
+//             //console.log('🔄 UPI Payment Success:', response);
             
 //             const captureResponse = await axios.post(
 //               `https://api.vegiffy.in/api/vendor/pay/${vendorId}`,
@@ -526,7 +526,7 @@
 //         image: 'https://res.cloudinary.com/dwmna13fi/image/upload/v1766050725/restaurants/images/vogulshuhb31u93ny8s9.jpg',
 //         handler: async function (response) {
 //           try {
-//             console.log('🔄 Payment Success:', response);
+//             //console.log('🔄 Payment Success:', response);
 
 //             const captureResponse = await axios.post(
 //               `https://api.vegiffy.in/api/vendor/pay/${vendorId}`,

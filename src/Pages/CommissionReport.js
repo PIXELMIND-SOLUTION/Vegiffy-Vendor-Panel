@@ -62,7 +62,7 @@ const CommissionReport = () => {
         if (data.success && data.data) {
           const commission = data.data.commission || 20;
           setRestaurantCommission(commission);
-          console.log(`✅ Restaurant commission loaded: ${commission}%`);
+          //console.log(`✅ Restaurant commission loaded: ${commission}%`);
         }
       } catch (err) {
         console.error("Error fetching restaurant details:", err);
@@ -194,7 +194,7 @@ const CommissionReport = () => {
     });
   };
 
-  console.log(summary);
+  //console.log(summary);
 
   // Apply filters
   useEffect(() => {
