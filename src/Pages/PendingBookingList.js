@@ -27,6 +27,9 @@ const PendingBookingList = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const storedRole = localStorage.getItem("role");
+
+
   // Filters and search
   const [dateFilter, setDateFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,9 +96,9 @@ const PendingBookingList = () => {
                 couponDiscount: order.couponDiscount || 0,
                 paymentMethod: order.paymentMethod || "N/A",
                 paymentStatus: order.paymentStatus || "N/A",
-                deliveryBoy: order.deliveryBoyId ? 
+                deliveryBoy: order.deliveryBoyId ?
                   `${order.deliveryBoyId.fullName} (${maskPhone(order.deliveryBoyId.mobileNumber)})` : "Not Assigned",
-                deliveryAddress: order.deliveryAddress ? 
+                deliveryAddress: order.deliveryAddress ?
                   `${order.deliveryAddress.street}, ${order.deliveryAddress.city}, ${order.deliveryAddress.state} - ${order.deliveryAddress.postalCode}` : "N/A",
                 raw: order,
               };
@@ -624,16 +627,17 @@ const PendingBookingList = () => {
                           >
                             <FaEdit />
                           </button>
-                          <button
-                            title="Delete Order"
-                            disabled={deleteLoading}
-                            onClick={() => deleteOrder(booking.bookingId)}
-                            className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${
-                              deleteLoading ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
-                          >
-                            <FaTrashAlt />
-                          </button>
+                          {storedRole === 'admin' && (
+                            <button
+                              title="Delete Order"
+                              disabled={deleteLoading}
+                              onClick={() => deleteOrder(booking.bookingId)}
+                              className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${deleteLoading ? "opacity-50 cursor-not-allowed" : ""
+                                }`}
+                            >
+                              <FaTrashAlt />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -671,13 +675,13 @@ const PendingBookingList = () => {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div><strong>Name:</strong> {viewBooking.userName}</div>
-                    <div><strong>Email:</strong> 
+                    <div><strong>Email:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userEmail}
                       </span>
                     </div>
-                    <div><strong>Phone:</strong> 
+                    <div><strong>Phone:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userPhone}
@@ -690,13 +694,12 @@ const PendingBookingList = () => {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-800 mb-3">Order Summary</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Status:</strong> 
-                      <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
-                        viewBooking.status === "Confirmed" ? "bg-green-600 text-white" :
+                    <div><strong>Status:</strong>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${viewBooking.status === "Confirmed" ? "bg-green-600 text-white" :
                         viewBooking.status === "Pending" ? "bg-yellow-500 text-white" :
-                        viewBooking.status === "Delivered" ? "bg-blue-600 text-white" :
-                        viewBooking.status === "Cancelled" ? "bg-red-600 text-white" : "bg-gray-500 text-white"
-                      }`}>
+                          viewBooking.status === "Delivered" ? "bg-blue-600 text-white" :
+                            viewBooking.status === "Cancelled" ? "bg-red-600 text-white" : "bg-gray-500 text-white"
+                        }`}>
                         {viewBooking.status}
                       </span>
                     </div>

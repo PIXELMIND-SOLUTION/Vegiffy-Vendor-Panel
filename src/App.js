@@ -55,15 +55,15 @@ function App() {
               <Route path="/mywallet" element={<MyWallet />} />
               <Route path="/myprofile" element={<VendorProfile />} />
               <Route path="/support" element={<VendorSupport />} />
-               <Route path="/users" element={<VendorUsers />} />
+              <Route path="/users" element={<VendorUsers />} />
               <Route path="/vendorpay" element={<VendorJoiningFee />} />
               <Route path="/myplans" element={<VendorMyPlans />} />
-             <Route path="/aboutus" element={<AboutUs />} />
-            <Route path="/comission" element={<CommissionReport />} />
-            <Route path="/account" element={<AccountManagement />} />
-            <Route path="/notification" element={<VendorNotifications />} />
-            <Route path="/myuserorders" element={<VendorUserOrders />} />
-            <Route path="/createreel" element={<CreateReel />} />
+              <Route path="/aboutus" element={<AboutUs />} />
+              <Route path="/comission" element={<CommissionReport />} />
+              <Route path="/account" element={<AccountManagement />} />
+              <Route path="/notification" element={<VendorNotifications />} />
+              <Route path="/myuserorders" element={<VendorUserOrders />} />
+              <Route path="/createreel" element={<CreateReel />} />
 
 
 

@@ -26,6 +26,9 @@ const CompletedBookingList = () => {
   // For modals
   const [viewBooking, setViewBooking] = useState(null);
 
+  const storedRole = localStorage.getItem("role");
+
+
   // Filters and search
   const [dateFilter, setDateFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,7 +79,7 @@ const CompletedBookingList = () => {
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
         console.log("API Response:", data); // Debugging
-        
+
         if (data.success) {
           // FIXED: Sirf "Delivered" status filter
           const mappedBookings = data.data
@@ -128,13 +131,13 @@ const CompletedBookingList = () => {
                 paymentStatus: order.paymentStatus || "N/A",
                 // Rider/Delivery Boy details
                 rider: riderDetails || deliveryBoyDetails,
-                deliveryAddress: order.deliveryAddress ? 
+                deliveryAddress: order.deliveryAddress ?
                   `${order.deliveryAddress.street}, ${order.deliveryAddress.city}, ${order.deliveryAddress.state} - ${order.deliveryAddress.postalCode}` : "N/A",
                 acceptedAt: order.acceptedAt || null,
                 raw: order,
               };
             });
-          
+
           console.log("Mapped Bookings:", mappedBookings); // Debugging
           setBookings(mappedBookings);
           setFilteredBookings(mappedBookings);
@@ -637,13 +640,13 @@ const CompletedBookingList = () => {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div><strong>Name:</strong> {viewBooking.userName}</div>
-                    <div><strong>Email:</strong> 
+                    <div><strong>Email:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userEmail}
                       </span>
                     </div>
-                    <div><strong>Phone:</strong> 
+                    <div><strong>Phone:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userPhone}
@@ -656,7 +659,7 @@ const CompletedBookingList = () => {
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <h4 className="font-semibold text-gray-800 mb-3">Order Summary</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Status:</strong> 
+                    <div><strong>Status:</strong>
                       <span className="ml-2 px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">
                         {viewBooking.status}
                       </span>

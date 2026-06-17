@@ -32,6 +32,9 @@ const CommissionReport = () => {
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const storedRole = localStorage.getItem("role");
+
+
   // Summary data
   const [summary, setSummary] = useState({
     totalOrders: 0,

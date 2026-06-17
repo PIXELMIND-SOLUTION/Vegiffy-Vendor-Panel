@@ -34,6 +34,9 @@ const BookingList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const storedRole = localStorage.getItem("role");
+
+
   // For modals
   const [viewBooking, setViewBooking] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
@@ -100,7 +103,7 @@ const BookingList = () => {
         status: "Assigned"
       };
     }
-    
+
     // Check if availableDeliveryBoys exists (available but not assigned)
     else if (booking.availableDeliveryBoys && booking.availableDeliveryBoys.length > 0) {
       const firstAvailable = booking.availableDeliveryBoys[0];
@@ -117,7 +120,7 @@ const BookingList = () => {
         }))
       };
     }
-    
+
     // No delivery boy info
     return {
       isAssigned: false,
@@ -243,7 +246,7 @@ const BookingList = () => {
     const excelData = filteredBookings.map(booking => {
       const deliveryInfo = booking.deliveryBoyInfo;
       let deliveryDetails = "Not Assigned";
-      
+
       if (deliveryInfo.isAssigned) {
         deliveryDetails = `${deliveryInfo.name} (${deliveryInfo.phone}) - ${deliveryInfo.vehicleType}`;
       } else if (deliveryInfo.availableCount > 0) {
@@ -315,7 +318,7 @@ const BookingList = () => {
     doc.text("Delivery Details:", startX, y);
     y += 6;
     doc.setFont("helvetica", "normal");
-    
+
     if (deliveryInfo.isAssigned) {
       doc.text(`Rider: ${deliveryInfo.name}`, startX, y);
       y += 5;
@@ -447,7 +450,7 @@ const BookingList = () => {
 
           <div className="p-6">
             <p className="text-gray-700 mb-4">{successMessage}</p>
-            
+
             <button
               onClick={() => setShowSuccessPopup(false)}
               className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
@@ -464,17 +467,16 @@ const BookingList = () => {
   const ErrorPopup = () => {
     if (!showErrorPopup) return null;
 
-    const isDeliveryBoyError = errorMessage.includes("No delivery boys found") || 
-                               errorMessage.includes("all are busy");
+    const isDeliveryBoyError = errorMessage.includes("No delivery boys found") ||
+      errorMessage.includes("all are busy");
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100] p-4">
         <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full transform animate-slideIn">
-          <div className={`rounded-t-3xl p-6 ${
-            isDeliveryBoyError 
-              ? 'bg-gradient-to-r from-orange-500 to-red-500' 
-              : 'bg-gradient-to-r from-red-500 to-pink-500'
-          }`}>
+          <div className={`rounded-t-3xl p-6 ${isDeliveryBoyError
+            ? 'bg-gradient-to-r from-orange-500 to-red-500'
+            : 'bg-gradient-to-r from-red-500 to-pink-500'
+            }`}>
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                 {isDeliveryBoyError ? (
@@ -497,14 +499,12 @@ const BookingList = () => {
           <div className="p-6">
             <div className="mb-4">
               <p className="text-gray-700 font-medium mb-2">Error Message:</p>
-              <div className={`p-4 rounded-xl ${
-                isDeliveryBoyError 
-                  ? 'bg-orange-50 border border-orange-200' 
-                  : 'bg-red-50 border border-red-200'
-              }`}>
-                <p className={`font-medium ${
-                  isDeliveryBoyError ? 'text-orange-800' : 'text-red-800'
+              <div className={`p-4 rounded-xl ${isDeliveryBoyError
+                ? 'bg-orange-50 border border-orange-200'
+                : 'bg-red-50 border border-red-200'
                 }`}>
+                <p className={`font-medium ${isDeliveryBoyError ? 'text-orange-800' : 'text-red-800'
+                  }`}>
                   {errorMessage}
                 </p>
               </div>
@@ -543,7 +543,7 @@ const BookingList = () => {
               >
                 Dismiss
               </button>
-              
+
               {isDeliveryBoyError && (
                 <button
                   onClick={() => {
@@ -617,21 +617,21 @@ const BookingList = () => {
           prev.map((b) =>
             b.bookingId === editBooking.bookingId
               ? {
-                  ...b,
-                  status: editStatus,
-                  preparationTime: preparationTime || b.preparationTime
-                }
+                ...b,
+                status: editStatus,
+                preparationTime: preparationTime || b.preparationTime
+              }
               : b
           )
         );
-        
+
         setSuccessMessage("Order status updated successfully!");
         setShowSuccessPopup(true);
         closeEditModal();
       } else {
         const errorMsg = data.message || "Failed to update order status";
         console.log("Error from backend:", errorMsg);
-        
+
         setErrorMessage(errorMsg);
         setErrorDetails(data);
         setShowErrorPopup(true);
@@ -817,8 +817,8 @@ const BookingList = () => {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border transition-colors ${statusFilter === status
-                    ? 'bg-blue-100 text-blue-800 border-blue-300'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  ? 'bg-blue-100 text-blue-800 border-blue-300'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
                   }`}
               >
                 {status} ({statusCounts[status]})
@@ -891,7 +891,7 @@ const BookingList = () => {
                 ) : (
                   filteredBookings.map((booking) => {
                     const deliveryInfo = booking.deliveryBoyInfo;
-                    
+
                     return (
                       <tr key={booking.bookingId} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
@@ -1052,15 +1052,17 @@ const BookingList = () => {
                             >
                               <FaEdit />
                             </button>
-                            <button
-                              title="Delete Order"
-                              disabled={deleteLoading}
-                              onClick={() => deleteOrder(booking.bookingId)}
-                              className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${deleteLoading ? "opacity-50 cursor-not-allowed" : ""
-                                }`}
-                            >
-                              <FaTrashAlt />
-                            </button>
+                            {storedRole === 'admin' && (
+                              <button
+                                title="Delete Order"
+                                disabled={deleteLoading}
+                                onClick={() => deleteOrder(booking.bookingId)}
+                                className={`inline-flex items-center p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${deleteLoading ? "opacity-50 cursor-not-allowed" : ""
+                                  }`}
+                              >
+                                <FaTrashAlt />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1099,13 +1101,13 @@ const BookingList = () => {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div><strong>Name:</strong> {viewBooking.userName}</div>
-                    <div><strong>Email:</strong> 
+                    <div><strong>Email:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userEmail}
                       </span>
                     </div>
-                    <div><strong>Phone:</strong> 
+                    <div><strong>Phone:</strong>
                       <span className="ml-2 flex items-center">
                         <FaEyeSlash className="mr-1 text-gray-400" size={12} />
                         {viewBooking.userPhone}
@@ -1123,8 +1125,8 @@ const BookingList = () => {
                   <div className="space-y-2 text-sm">
                     <div><strong>Status:</strong>
                       <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${viewBooking.status === "Accepted" ? "bg-green-600 text-white" :
-                          viewBooking.status === "Pending" ? "bg-yellow-500 text-white" :
-                            viewBooking.status === "Rejected" ? "bg-red-600 text-white" : "bg-gray-500 text-white"
+                        viewBooking.status === "Pending" ? "bg-yellow-500 text-white" :
+                          viewBooking.status === "Rejected" ? "bg-red-600 text-white" : "bg-gray-500 text-white"
                         }`}>
                         {viewBooking.status}
                       </span>
@@ -1147,7 +1149,7 @@ const BookingList = () => {
                 <div className="space-y-4">
                   {(() => {
                     const deliveryInfo = viewBooking.deliveryBoyInfo;
-                    
+
                     if (deliveryInfo.isAssigned) {
                       return (
                         <div className="bg-white rounded-lg p-4 border border-purple-100">
@@ -1202,9 +1204,8 @@ const BookingList = () => {
                               <div key={idx} className="bg-purple-50 rounded-lg p-3 border border-purple-200">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-sm font-medium">{boy.name}</span>
-                                  <span className={`text-xs px-2 py-1 rounded-full ${
-                                    boy.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                                  }`}>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${boy.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                    }`}>
                                     {boy.status}
                                   </span>
                                 </div>
@@ -1360,10 +1361,10 @@ const BookingList = () => {
                   </svg>
                   Coupon Details
                 </h4>
-                
+
                 {(() => {
                   const couponDetails = viewBooking.raw.chargeCalculations?.couponDiscount || viewBooking.raw.appliedCoupon;
-                  
+
                   if (couponDetails && couponDetails.amount > 0) {
                     return (
                       <div className="space-y-3">
@@ -1371,7 +1372,7 @@ const BookingList = () => {
                           <div>
                             <div className="font-medium text-gray-800">{couponDetails.couponCode || "N/A"}</div>
                             <div className="text-sm text-gray-600 mt-1">
-                              {couponDetails.discountType === 'percentage' 
+                              {couponDetails.discountType === 'percentage'
                                 ? `${couponDetails.discountValue}% discount`
                                 : `Flat ₹${couponDetails.discountValue} off`
                               }
@@ -1382,14 +1383,14 @@ const BookingList = () => {
                             <div className="text-xs text-gray-500 mt-1">Applied</div>
                           </div>
                         </div>
-                        
+
                         <div className="text-sm text-gray-600 space-y-2">
                           {couponDetails.calculation && (
                             <div><strong>Calculation:</strong> {couponDetails.calculation}</div>
                           )}
-                          <div><strong>Discount Type:</strong> 
-                            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${couponDetails.discountType === 'percentage' 
-                              ? 'bg-blue-100 text-blue-800' 
+                          <div><strong>Discount Type:</strong>
+                            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${couponDetails.discountType === 'percentage'
+                              ? 'bg-blue-100 text-blue-800'
                               : 'bg-green-100 text-green-800'}`}>
                               {couponDetails.discountType}
                             </span>
