@@ -22,10 +22,11 @@ const CommissionReport = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [restaurantCommission, setRestaurantCommission] = useState(20);
+  const [restaurantName, setRestaurantName] = useState("");
 
-  // Tax constants
-  const GST_RATE = 18;
-  const TDS_RATE = 1;
+  // Tax constants (will be overridden from API)
+  const [GST_RATE, setGST_RATE] = useState(18);
+  const [TDS_RATE, setTDS_RATE] = useState(1);
 
   // Filters and search
   const [startDate, setStartDate] = useState("");
@@ -33,7 +34,6 @@ const CommissionReport = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const storedRole = localStorage.getItem("role");
-
 
   // Summary data
   const [summary, setSummary] = useState({
@@ -53,107 +53,76 @@ const CommissionReport = () => {
 
   const vendorId = localStorage.getItem("vendorId");
 
-  // Fetch restaurant details to get actual commission
-  useEffect(() => {
-    const fetchRestaurantDetails = async () => {
-      try {
-        const res = await fetch(`https://api.vegiffy.in/api/restaurant/${vendorId}`);
-        const data = await res.json();
-        if (data.success && data.data) {
-          const commission = data.data.commission || 20;
-          setRestaurantCommission(commission);
-          //console.log(`✅ Restaurant commission loaded: ${commission}%`);
-        }
-      } catch (err) {
-        console.error("Error fetching restaurant details:", err);
-      }
-    };
-
-    if (vendorId) {
-      fetchRestaurantDetails();
-    }
-  }, [vendorId]);
-
-  // Fetch delivered orders and calculate all taxes
+  // Fetch all commission data from the new unified API
   useEffect(() => {
     if (!vendorId) {
       setError("Vendor ID not found in localStorage");
       return;
     }
 
-    const fetchOrders = async () => {
+    const fetchCommissionData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`https://api.vegiffy.in/api/vendor/restaurantorders/${vendorId}`);
-        if (!res.ok) throw new Error("Failed to fetch orders");
+        const res = await fetch(`https://api.vegiffy.in/api/vendor/commission/${vendorId}`);
+        if (!res.ok) throw new Error("Failed to fetch commission data");
         const data = await res.json();
 
-        if (data.success) {
-          // Filter only delivered orders
-          const deliveredOrders = data.data.filter(order =>
-            order.orderStatus === "Delivered" ||
-            order.orderStatus === "delivered"
-          );
+        if (data.success && data.data) {
+          const { restaurant, taxRates, orders: rawOrders } = data.data;
 
-          // Map orders with ALL calculations - ONLY customer name shown
-          const processedOrders = deliveredOrders.map((order) => {
-            const subTotal = order.subTotal || 0;
+          // Set restaurant & tax info from API
+          setRestaurantCommission(restaurant.commissionRate || 20);
+          setRestaurantName(restaurant.name || "");
+          setGST_RATE(taxRates?.gst || 18);
+          setTDS_RATE(taxRates?.tds || 1);
 
-            // Step 1: Commission to Vegiffy (20% of subtotal)
-            const commissionAmount = (subTotal * restaurantCommission) / 100;
+          // Map orders — API already provides all calculated fields
+          const processedOrders = rawOrders.map((order) => ({
+            orderId: order.orderId,
+            orderDate: order.orderDate,
+            orderDateTime: order.orderDateTime,
+            customerName: order.customerName,
+            restaurantName: order.restaurantName,
 
-            // Step 2: GST on commission (18% of commission)
-            const gstOnCommission = (commissionAmount * GST_RATE) / 100;
+            // Order amounts
+            subTotal: order.subTotal || 0,
+            deliveryCharge: order.deliveryCharge || 0,
+            couponDiscount: order.couponDiscount || 0,
 
-            // Step 3: Vendor's gross earning (subtotal - commission)
-            const vendorGrossEarning = subTotal - commissionAmount;
+            // Commission calculations (from API)
+            commissionPercent: order.commissionPercent,
+            commissionAmount: order.commissionAmount,
 
-            // Step 4: TDS on vendor earning (0.5% of vendorGrossEarning)
-            const tdsOnVendorEarning = (vendorGrossEarning * TDS_RATE) / 100;
+            // Vendor calculations (from API)
+            vendorGrossEarning: order.vendorGrossEarning,
 
-            // Step 5: 🔥 FIXED: Net payable = subtotal - commission - GST - TDS
-            // Using toFixed(2) and parseFloat to avoid floating point issues
-            const netPayable = parseFloat((subTotal - commissionAmount - gstOnCommission - tdsOnVendorEarning).toFixed(2));
+            // Tax calculations (from API)
+            gstOnCommission: order.gstOnCommission,
+            tdsOnVendorEarning: order.tdsOnVendorEarning,
+            netPayable: order.netPayable,
 
-            return {
-              orderId: order._id,
-              orderDate: new Date(order.createdAt).toISOString().split("T")[0],
-              orderDateTime: new Date(order.createdAt).toLocaleString(),
-              customerName: `${order.userId?.firstName || "N/A"} ${order.userId?.lastName || ""}`,
-              // Phone and email are intentionally excluded
-              restaurantName: order.restaurantId?.restaurantName || "N/A",
-
-              // Order amounts
-              subTotal: subTotal,
-              deliveryCharge: order.deliveryCharge || 0,
-              couponDiscount: order.couponDiscount || 0,
-
-              // Commission calculations
-              commissionPercent: restaurantCommission,
-              commissionAmount: parseFloat(commissionAmount.toFixed(2)),
-
-              // Vendor calculations
-              vendorGrossEarning: parseFloat(vendorGrossEarning.toFixed(2)),
-
-              // Tax calculations
-              gstOnCommission: parseFloat(gstOnCommission.toFixed(2)),
-              tdsOnVendorEarning: parseFloat(tdsOnVendorEarning.toFixed(2)),
-              netPayable: netPayable,
-
-              // Payment info
-              paymentMethod: order.paymentMethod || "N/A",
-              paymentStatus: order.paymentStatus || "N/A",
-              status: order.orderStatus,
-              raw: order
-            };
-          });
+            // Payment info
+            paymentMethod: order.paymentMethod || "N/A",
+            paymentStatus: order.paymentStatus || "N/A",
+            status: order.status,
+            raw: order
+          }));
 
           setOrders(processedOrders);
           setFilteredOrders(processedOrders);
 
-          // Calculate summary with all taxes
-          calculateSummary(processedOrders);
+          // Use summary directly from API for initial state
+          setSummary({
+            totalOrders: data.data.summary.totalOrders,
+            totalSubtotal: parseFloat(data.data.summary.totalSubtotal.toFixed(2)),
+            totalCommission: parseFloat(data.data.summary.totalCommission.toFixed(2)),
+            totalVendorEarning: parseFloat(data.data.summary.totalVendorEarning.toFixed(2)),
+            averageCommissionPercent: data.data.summary.averageCommissionPercent,
+            totalGST: parseFloat(data.data.summary.totalGST.toFixed(2)),
+            totalTDS: parseFloat(data.data.summary.totalTDS.toFixed(2)),
+            netPayable: parseFloat(data.data.summary.netPayable.toFixed(2)),
+          });
         } else {
           setError("API returned unsuccessful response");
         }
@@ -163,12 +132,10 @@ const CommissionReport = () => {
       setLoading(false);
     };
 
-    if (restaurantCommission) {
-      fetchOrders();
-    }
-  }, [vendorId, restaurantCommission]);
+    fetchCommissionData();
+  }, [vendorId]);
 
-  // Calculate summary data with all taxes
+  // Calculate summary data with all taxes (used when filters change)
   const calculateSummary = (orderList) => {
     const totalOrders = orderList.length;
     const totalSubtotal = orderList.reduce((sum, order) => sum + order.subTotal, 0);
@@ -193,8 +160,6 @@ const CommissionReport = () => {
       averageCommissionPercent
     });
   };
-
-  //console.log(summary);
 
   // Apply filters
   useEffect(() => {
@@ -235,7 +200,7 @@ const CommissionReport = () => {
     setSelectedOrder(null);
   };
 
-  // Download Excel Report - Removed phone number from export
+  // Download Excel Report
   const downloadExcel = () => {
     const dataForExport = filteredOrders.map(order => ({
       "Order ID": order.orderId,
@@ -262,7 +227,6 @@ const CommissionReport = () => {
       "Order Status": order.status
     }));
 
-    // Add summary row
     const summaryRow = {
       "Order ID": "🔴 SUMMARY",
       "Date": "",
@@ -293,7 +257,6 @@ const CommissionReport = () => {
   const generatePDFReport = () => {
     const doc = new jsPDF();
 
-    // Header
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
     doc.setTextColor(34, 197, 94);
@@ -303,12 +266,10 @@ const CommissionReport = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: "center" });
 
-    // Tax Rates Info
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 255);
     doc.text(`Tax Rates: GST @${GST_RATE}% on Commission | TDS @${TDS_RATE}% on Vendor Earnings`, 105, 35, { align: "center" });
 
-    // Summary Section
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text("Summary Report", 20, 48);
@@ -319,7 +280,6 @@ const CommissionReport = () => {
     let y = 63;
     doc.setFontSize(10);
 
-    // Summary table
     const summaryData = [
       ["Total Orders", summary.totalOrders.toString()],
       ["Total Subtotal", `₹${summary.totalSubtotal.toFixed(2)}`],
@@ -343,7 +303,6 @@ const CommissionReport = () => {
 
     y += 10;
 
-    // Detailed Orders
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text("Order-wise Detailed Calculations", 20, y);
@@ -352,7 +311,6 @@ const CommissionReport = () => {
     doc.line(20, y, 190, y);
     y += 10;
 
-    // Table headers
     const headers = ["Order ID", "Date", "Customer", "Subtotal", "Comm", "GST", "Vendor Gross", "TDS", "Net"];
     let x = 20;
     headers.forEach(header => {
@@ -366,8 +324,7 @@ const CommissionReport = () => {
     doc.line(20, y, 190, y);
     y += 5;
 
-    // Order rows
-    filteredOrders.slice(0, 20).forEach((order, index) => {
+    filteredOrders.slice(0, 20).forEach((order) => {
       if (y > 270) {
         doc.addPage();
         y = 20;
@@ -377,7 +334,7 @@ const CommissionReport = () => {
       const rowData = [
         order.orderId.substring(0, 6) + "...",
         order.orderDate.substring(5),
-        order.customerName.split(" ")[0] + "...", // Only first name with ellipsis
+        order.customerName.split(" ")[0] + "...",
         `₹${order.subTotal.toFixed(2)}`,
         `₹${order.commissionAmount.toFixed(2)}`,
         `₹${order.gstOnCommission.toFixed(2)}`,
@@ -390,12 +347,10 @@ const CommissionReport = () => {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6);
 
-        // Color coding
         if (cellIndex === 4) doc.setTextColor(220, 38, 38);
         else if (cellIndex === 5) doc.setTextColor(59, 130, 246);
         else if (cellIndex === 6) doc.setTextColor(34, 197, 94);
         else if (cellIndex === 7) doc.setTextColor(249, 115, 22);
-        else if (cellIndex === 8) doc.setTextColor(0, 0, 0);
         else doc.setTextColor(0, 0, 0);
 
         doc.text(cell, x, y);
@@ -405,7 +360,6 @@ const CommissionReport = () => {
       y += 5;
     });
 
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text(`Page 1 • Total Orders: ${filteredOrders.length} • Commission Rate: ${restaurantCommission}% • GST: ${GST_RATE}% • TDS: ${TDS_RATE}%`, 105, 285, { align: "center" });
@@ -420,22 +374,18 @@ const CommissionReport = () => {
     setSearchTerm("");
   };
 
-  // Get current month range
   const setCurrentMonth = () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
     setStartDate(firstDay.toISOString().split('T')[0]);
     setEndDate(lastDay.toISOString().split('T')[0]);
   };
 
-  // Set last 7 days
   const setLast7Days = () => {
     const now = new Date();
     const lastWeek = new Date(now);
     lastWeek.setDate(now.getDate() - 6);
-
     setStartDate(lastWeek.toISOString().split('T')[0]);
     setEndDate(now.toISOString().split('T')[0]);
   };
@@ -485,6 +435,13 @@ const CommissionReport = () => {
           </div>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+            {error}
+          </div>
+        )}
+
         {/* Tax Rates Banner */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
@@ -525,7 +482,7 @@ const CommissionReport = () => {
           </div>
         </div>
 
-        {/* Summary Cards - Full Grid */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border-t-4 border-blue-500">
             <div className="flex items-center justify-between mb-3">
@@ -611,11 +568,8 @@ const CommissionReport = () => {
         {/* Filters Section */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* Search Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Orders
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Orders</label>
               <div className="relative">
                 <input
                   type="text"
@@ -628,11 +582,8 @@ const CommissionReport = () => {
               </div>
             </div>
 
-            {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
               <div className="relative">
                 <input
                   type="date"
@@ -644,11 +595,8 @@ const CommissionReport = () => {
               </div>
             </div>
 
-            {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
               <div className="relative">
                 <input
                   type="date"
@@ -660,11 +608,8 @@ const CommissionReport = () => {
               </div>
             </div>
 
-            {/* Quick Filters */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quick Filters
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quick Filters</label>
               <div className="flex gap-2">
                 <button
                   onClick={setLast7Days}
@@ -694,47 +639,25 @@ const CommissionReport = () => {
 
         {/* Results Count */}
         <div className="mb-4 flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Showing {filteredOrders.length} orders
-          </p>
-          <span className="text-xs text-gray-500">
-            Last updated: {new Date().toLocaleTimeString()}
-          </span>
+          <p className="text-sm text-gray-600">Showing {filteredOrders.length} orders</p>
+          <span className="text-xs text-gray-500">Last updated: {new Date().toLocaleTimeString()}</span>
         </div>
 
-        {/* Main Table - Full Grid */}
+        {/* Main Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Order Details
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Subtotal
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Commission
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    GST
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Vendor Gross
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    TDS
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Net Payable
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Order Details</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subtotal</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Commission</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">GST</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vendor Gross</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">TDS</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Net Payable</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -758,18 +681,13 @@ const CommissionReport = () => {
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 space-y-1">
                           <div className="font-medium">#{order.orderId.substring(0, 8)}</div>
-                          <div className="text-gray-600 text-xs">
-                            {order.orderDateTime}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {order.restaurantName}
-                          </div>
+                          <div className="text-gray-600 text-xs">{order.orderDateTime}</div>
+                          <div className="text-xs text-gray-500">{order.restaurantName}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           <div className="font-medium">{order.customerName}</div>
-                          {/* Phone and email removed as requested */}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -778,9 +696,7 @@ const CommissionReport = () => {
                       <td className="px-6 py-4">
                         <div className="text-sm space-y-1">
                           <div className="font-semibold text-red-600">₹{order.commissionAmount.toFixed(2)}</div>
-                          <div className="text-xs text-gray-500">
-                            {order.commissionPercent}%
-                          </div>
+                          <div className="text-xs text-gray-500">{order.commissionPercent}%</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -828,7 +744,7 @@ const CommissionReport = () => {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Order Info - No phone number */}
+              {/* Order Info */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">Order #{selectedOrder.orderId}</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -840,7 +756,6 @@ const CommissionReport = () => {
 
               {/* Calculation Steps */}
               <div className="space-y-4">
-                {/* Step 1: Subtotal */}
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <h5 className="font-medium text-gray-700 mb-3">1. Base Amount</h5>
                   <div className="space-y-2">
@@ -852,7 +767,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Step 2: Commission */}
                 <div className="border rounded-lg p-4 bg-red-50">
                   <h5 className="font-medium text-gray-700 mb-3">2. Commission to Vegiffy</h5>
                   <div className="space-y-2">
@@ -871,7 +785,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Step 3: GST on Commission */}
                 <div className="border rounded-lg p-4 bg-blue-50">
                   <h5 className="font-medium text-gray-700 mb-3">3. GST on Commission</h5>
                   <div className="space-y-2">
@@ -890,7 +803,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Step 4: Vendor Gross */}
                 <div className="border rounded-lg p-4 bg-purple-50">
                   <h5 className="font-medium text-gray-700 mb-3">4. Vendor Gross Earning</h5>
                   <div className="space-y-2">
@@ -909,7 +821,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Step 5: TDS */}
                 <div className="border rounded-lg p-4 bg-orange-50">
                   <h5 className="font-medium text-gray-700 mb-3">5. TDS Deduction</h5>
                   <div className="space-y-2">
@@ -928,7 +839,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Final Net Payable */}
                 <div className="border-2 border-green-500 rounded-lg p-4 bg-green-50">
                   <h5 className="font-medium text-gray-700 mb-3">6. FINAL NET PAYABLE TO YOU</h5>
                   <div className="space-y-2">
@@ -955,7 +865,6 @@ const CommissionReport = () => {
                   </div>
                 </div>
 
-                {/* Summary */}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h5 className="font-medium mb-2">Summary for this Order:</h5>
                   <div className="grid grid-cols-2 gap-2 text-sm">
