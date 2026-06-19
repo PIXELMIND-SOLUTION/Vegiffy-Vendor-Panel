@@ -59,7 +59,7 @@
 
 //   // WhatsApp contact for vendors
 //   const whatsappContact = {
-//     number: "9391973675",
+//     number: "9550003140",
 //     message: "Hi, I have made payment for Vegiffy Vendor Program. Here is my payment screenshot:"
 //   };
 
@@ -1444,7 +1444,7 @@ const VendorJoiningFee = () => {
 
   // WhatsApp contact for vendors
   const whatsappContact = {
-    number: "9391973675",
+    number: "9550003140",
     message: "Hi, I have made payment for Vegiffy Vendor Program. Here is my payment screenshot:"
   };
 

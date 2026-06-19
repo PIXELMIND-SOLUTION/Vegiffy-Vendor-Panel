@@ -5,10 +5,395 @@ import VeggyfyLogo from '../Images/veggifylogo.jpeg';
 import { 
   FiCheckCircle, FiX, FiEye, FiEyeOff, FiMail, FiLock, 
   FiRefreshCw, FiClock, FiArrowLeft, FiKey, FiShield,
-  FiUsers, FiShoppingBag, FiTrendingUp,
-  FiUserPlus
+  FiUsers, FiUserPlus, FiAlertCircle
 } from 'react-icons/fi';
 
+// Forgot Password Modal Component
+const ForgotPasswordModal = ({
+  isOpen,
+  onClose,
+  resetStep,
+  forgotEmail,
+  setForgotEmail,
+  resetOtp,
+  setResetOtp,
+  newPassword,
+  setNewPassword,
+  confirmPassword,
+  setConfirmPassword,
+  showNewPassword,
+  showConfirmPassword,
+  toggleNewPasswordVisibility,
+  toggleConfirmPasswordVisibility,
+  error,
+  success,
+  isLoading,
+  resendLoading,
+  countdown,
+  canResend,
+  handleForgotPassword,
+  handleVerifyResetOtp,
+  handleResetPassword,
+  handleResendResetOtp,
+  handleBackToForgotEmail,
+  formatTime
+}) => {
+  const resetOtpInputRef = useRef(null);
+
+  useEffect(() => {
+    if (resetStep === 'otp' && resetOtpInputRef.current) {
+      setTimeout(() => resetOtpInputRef.current.focus(), 100);
+    }
+  }, [resetStep]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white text-center relative">
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 text-white hover:text-blue-200 transition-colors"
+          >
+            <FiX size={20} />
+          </button>
+          <div className="flex justify-center mb-2">
+            <div className="bg-white bg-opacity-20 rounded-full p-2">
+              <FiKey className="text-2xl" />
+            </div>
+          </div>
+          <h3 className="text-lg font-bold">
+            Reset Password
+          </h3>
+          <p className="text-blue-100 text-xs">
+            {resetStep === 'email' && 'Enter your email to receive OTP'}
+            {resetStep === 'otp' && 'Enter the OTP sent to your email'}
+            {resetStep === 'reset' && 'Create a new password'}
+          </p>
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+          {error && (
+            <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-600 text-xs">
+              <FiAlertCircle className="mr-2 flex-shrink-0" size={12} />
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-3 p-2.5 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-600 text-xs">
+              <FiCheckCircle className="mr-2 flex-shrink-0" size={12} />
+              {success}
+            </div>
+          )}
+
+          {/* Step 1: Email */}
+          {resetStep === 'email' && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiMail className="text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
+                    placeholder="vendor@example.com"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Sending OTP...
+                  </>
+                ) : (
+                  'Send OTP'
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: OTP Verification */}
+          {resetStep === 'otp' && (
+            <form onSubmit={handleVerifyResetOtp} className="space-y-4">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded p-2 text-center">
+                <div className="flex items-center justify-center space-x-1.5">
+                  <FiClock className="text-blue-500" size={12} />
+                  <span className="text-blue-700 text-xs">
+                    OTP expires: <span className="font-bold">{formatTime(countdown)}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                  4-Digit OTP
+                </label>
+                <input
+                  ref={resetOtpInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength="4"
+                  value={resetOtp}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    if (!/^\d*$/.test(value)) return;
+                    if (value.length > 4) value = value.substring(0, 4);
+                    setResetOtp(value);
+                  }}
+                  className="w-full p-3 text-center text-xl border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
+                  placeholder="0000"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  disabled={isLoading || resetOtp.length !== 4}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify OTP'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendResetOtp}
+                  disabled={!canResend || resendLoading}
+                  className={`w-full py-2 border rounded text-sm flex items-center justify-center space-x-1.5 transition-all duration-300 ${
+                    canResend
+                      ? 'border-blue-500 text-blue-600 hover:bg-blue-50'
+                      : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {resendLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-blue-500 border-solid"></div>
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiRefreshCw size={12} />
+                      <span>
+                        {canResend ? 'Resend OTP' : `Resend in ${formatTime(countdown)}`}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleBackToForgotEmail}
+                  className="inline-flex items-center text-xs text-gray-600 hover:text-gray-800"
+                >
+                  <FiArrowLeft className="mr-1" size={12} />
+                  Back to email
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 3: Reset Password */}
+          {resetStep === 'reset' && (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
+                    placeholder="••••••••"
+                    required
+                    minLength="6"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleNewPasswordVisibility}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+                    disabled={isLoading}
+                  >
+                    {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
+                    placeholder="••••••••"
+                    required
+                    minLength="6"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleConfirmPasswordVisibility}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+                    disabled={isLoading}
+                  >
+                    {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  disabled={isLoading || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Resetting Password...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleBackToForgotEmail}
+                  className="inline-flex items-center text-xs text-gray-600 hover:text-gray-800"
+                >
+                  <FiArrowLeft className="mr-1" size={12} />
+                  Back to email
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Success Popup Component
+const SuccessPopup = ({ isOpen, onClose, popupCountdown, formatTime }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white text-center relative">
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 text-white hover:text-green-200 transition-colors"
+          >
+            <FiX size={20} />
+          </button>
+          
+          <div className="flex justify-center mb-4">
+            <div className="bg-white bg-opacity-20 rounded-full p-3">
+              <FiCheckCircle className="text-3xl" />
+            </div>
+          </div>
+          <h3 className="text-xl font-bold mb-2">
+            Welcome to Vegiffy! 🎉
+          </h3>
+          <p className="text-green-100 text-sm">
+            Login successful. Redirecting to dashboard...
+          </p>
+        </div>
+        
+        {/* Content */}
+        <div className="p-5 text-center">
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-yellow-800 font-semibold text-sm mb-1">
+              🚀 Ready to Grow Your Business?
+            </p>
+            <p className="text-gray-700 text-xs">
+              Access your restaurant dashboard and start managing orders, menu, and earnings!
+            </p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+              <span className="text-blue-700 text-xs">
+                Auto redirect in: <span className="font-bold text-blue-800">{formatTime(popupCountdown)}</span>
+              </span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2">
+              <div 
+                className="bg-blue-600 h-1.5 rounded-full"
+                style={{ width: `${((60 - popupCountdown) / 60) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              <span className="text-xs text-gray-600">
+                {popupCountdown > 30 ? "Loading dashboard..." : 
+                 popupCountdown > 10 ? "Almost there..." : "Redirecting now!"}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-xs"
+            >
+              <span>Go to Dashboard</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main Login Component
 const LoginPage = () => {
   // Login State
   const [email, setEmail] = useState('');
@@ -21,6 +406,15 @@ const LoginPage = () => {
   const [vendorId, setVendorId] = useState('');
   const [storedOtp, setStoredOtp] = useState('');
   
+  // Forgot Password State
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resetStep, setResetStep] = useState('email');
+  
   // Common State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -30,6 +424,7 @@ const LoginPage = () => {
   const [canResend, setCanResend] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [popupCountdown, setPopupCountdown] = useState(60);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const navigate = useNavigate();
   const otpInputRef = useRef(null);
@@ -52,13 +447,13 @@ const LoginPage = () => {
 
   // Countdown for OTP expiry
   useEffect(() => {
-    if (step === 'verify-otp' && countdown > 0) {
+    if ((step === 'verify-otp' || resetStep === 'otp') && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (step === 'verify-otp' && countdown === 0) {
+    } else if ((step === 'verify-otp' || resetStep === 'otp') && countdown === 0) {
       setCanResend(true);
     }
-  }, [step, countdown]);
+  }, [step, resetStep, countdown]);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -205,15 +600,133 @@ const LoginPage = () => {
     }
   };
 
-  const handleUseDemoOtp = () => {
-    if (storedOtp && storedOtp.length === 4) {
-      setOtp(storedOtp);
-      setSuccess('Demo OTP filled! Click Verify to continue.');
-      setTimeout(() => {
-        if (otpInputRef.current) {
-          otpInputRef.current.focus();
-        }
-      }, 100);
+  // Forgot Password Handlers
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!forgotEmail || !validateEmail(forgotEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post('https://api.vegiffy.in/api/vendor/forgot-password', {
+        email: forgotEmail.toLowerCase()
+      });
+
+      if (response.data.success) {
+        setResetStep('otp');
+        setSuccess('OTP sent successfully! Please check your email.');
+        setResetOtp('');
+        setCountdown(300);
+        setCanResend(false);
+      } else {
+        setError(response.data.message || 'Failed to send OTP');
+      }
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Network error. Please check your connection.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyResetOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (resetOtp.length !== 4) {
+      setError('Please enter the complete 4-digit OTP');
+      return;
+    }
+
+    // Move to reset password step
+    setResetStep('reset');
+    setSuccess('OTP verified! Please create a new password.');
+  };
+
+  const handleResendResetOtp = async () => {
+    if (!canResend && countdown > 0) return;
+    
+    setResendLoading(true);
+    setError('');
+    
+    try {
+      const response = await axios.post('https://api.vegiffy.in/api/vendor/forgot-password', {
+        email: forgotEmail.toLowerCase()
+      });
+
+      if (response.data.success) {
+        setSuccess('New OTP sent successfully!');
+        setCountdown(300);
+        setCanResend(false);
+        setResetOtp('');
+      }
+    } catch (err) {
+      setError('Failed to resend OTP. Please try again.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!newPassword || newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post('https://api.vegiffy.in/api/vendor/reset-password', {
+        email: forgotEmail.toLowerCase(),
+        otp: resetOtp,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword
+      });
+
+      if (response.data.success) {
+        setSuccess('Password reset successfully!');
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setResetStep('email');
+          setForgotEmail('');
+          setResetOtp('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setError('');
+          setSuccess('');
+        }, 2000);
+      } else {
+        setError(response.data.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      console.error('Reset password error:', err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -224,8 +737,23 @@ const LoginPage = () => {
     setOtp('');
   };
 
+  const handleBackToForgotEmail = () => {
+    setResetStep('email');
+    setError('');
+    setSuccess('');
+    setResetOtp('');
+  };
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   const formatTime = (seconds) => {
@@ -244,82 +772,26 @@ const LoginPage = () => {
     navigate('/register');
   };
 
-  const SuccessPopup = () => (
-    showSuccessPopup && (
-      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white text-center relative">
-            <button
-              onClick={handleClosePopup}
-              className="absolute top-3 right-3 text-white hover:text-green-200 transition-colors"
-            >
-              <FiX size={20} />
-            </button>
-            
-            <div className="flex justify-center mb-4">
-              <div className="bg-white bg-opacity-20 rounded-full p-3">
-                <FiCheckCircle className="text-3xl" />
-              </div>
-            </div>
-            <h3 className="text-xl font-bold mb-2">
-              Welcome to Vegiffy! 🎉
-            </h3>
-            <p className="text-green-100 text-sm">
-              Login successful. Redirecting to dashboard...
-            </p>
-          </div>
-          
-          {/* Content */}
-          <div className="p-5 text-center">
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 mb-4">
-              <p className="text-yellow-800 font-semibold text-sm mb-1">
-                🚀 Ready to Grow Your Business?
-              </p>
-              <p className="text-gray-700 text-xs">
-                Access your restaurant dashboard and start managing orders, menu, and earnings!
-              </p>
-            </div>
-            
-            {/* Countdown Timer */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                <span className="text-blue-700 text-xs">
-                  Auto redirect in: <span className="font-bold text-blue-800">{formatTime(popupCountdown)}</span>
-                </span>
-              </div>
-              <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2">
-                <div 
-                  className="bg-blue-600 h-1.5 rounded-full"
-                  style={{ width: `${((60 - popupCountdown) / 60) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                <span className="text-xs text-gray-600">
-                  {popupCountdown > 30 ? "Loading dashboard..." : 
-                   popupCountdown > 10 ? "Almost there..." : "Redirecting now!"}
-                </span>
-              </div>
-              <button
-                onClick={handleClosePopup}
-                className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-xs"
-              >
-                <span>Go to Dashboard</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  );
+  const handleForgotPasswordClick = () => {
+    setShowForgotPassword(true);
+    setResetStep('email');
+    setForgotEmail('');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleCloseForgotPassword = () => {
+    setShowForgotPassword(false);
+    setResetStep('email');
+    setForgotEmail('');
+    setResetOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setError('');
+    setSuccess('');
+    setCountdown(300);
+    setCanResend(false);
+  };
 
   const renderLoginForm = () => (
     <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -372,6 +844,16 @@ const LoginPage = () => {
         </div>
       </div>
 
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={handleForgotPasswordClick}
+          className="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+        >
+          Forgot Password?
+        </button>
+      </div>
+
       <button
         type="submit"
         disabled={isLoading}
@@ -390,7 +872,6 @@ const LoginPage = () => {
         )}
       </button>
 
-      {/* REGISTER BUTTON */}
       <div className="pt-2">
         <button
           type="button"
@@ -409,22 +890,6 @@ const LoginPage = () => {
 
   const renderOtpVerification = () => (
     <form onSubmit={handleVerifyOtp} className="space-y-5">
-      {/* {storedOtp && (
-        <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded p-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-800 font-medium text-xs">Demo OTP: <span className="font-bold">{storedOtp}</span></p>
-            </div>
-            <button
-              onClick={handleUseDemoOtp}
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-0.5 rounded text-xs hover:from-yellow-600 hover:to-orange-600 transition-colors"
-            >
-              Auto-fill
-            </button>
-          </div>
-        </div>
-      )} */}
-
       <div>
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded p-2 text-center">
           <div className="flex items-center justify-center space-x-1.5">
@@ -501,7 +966,6 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
       <div className="max-w-5xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
         <div className="flex flex-col lg:flex-row">
-          {/* Left Side - Form */}
           <div className="w-full lg:w-1/2 p-6 lg:p-8">
             <div className="max-w-md mx-auto">
               <div className="mb-6">
@@ -521,7 +985,6 @@ const LoginPage = () => {
                 </p>
               </div>
 
-              {/* Step Indicator */}
               <div className="flex items-center justify-center space-x-4 mb-4">
                 <div className={`flex items-center ${step === 'login' ? 'text-green-600' : 'text-gray-400'}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step === 'login' ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-gray-50'} text-xs`}>
@@ -579,7 +1042,6 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Right Side - Logo */}
           <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center p-6 lg:p-8">
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-64 h-64 bg-white/20 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-center">
@@ -596,8 +1058,42 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Success Popup */}
-      <SuccessPopup />
+      <SuccessPopup 
+        isOpen={showSuccessPopup}
+        onClose={handleClosePopup}
+        popupCountdown={popupCountdown}
+        formatTime={formatTime}
+      />
+
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={handleCloseForgotPassword}
+        resetStep={resetStep}
+        forgotEmail={forgotEmail}
+        setForgotEmail={setForgotEmail}
+        resetOtp={resetOtp}
+        setResetOtp={setResetOtp}
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
+        showNewPassword={showNewPassword}
+        showConfirmPassword={showConfirmPassword}
+        toggleNewPasswordVisibility={toggleNewPasswordVisibility}
+        toggleConfirmPasswordVisibility={toggleConfirmPasswordVisibility}
+        error={error}
+        success={success}
+        isLoading={isLoading}
+        resendLoading={resendLoading}
+        countdown={countdown}
+        canResend={canResend}
+        handleForgotPassword={handleForgotPassword}
+        handleVerifyResetOtp={handleVerifyResetOtp}
+        handleResetPassword={handleResetPassword}
+        handleResendResetOtp={handleResendResetOtp}
+        handleBackToForgotEmail={handleBackToForgotEmail}
+        formatTime={formatTime}
+      />
     </div>
   );
 };

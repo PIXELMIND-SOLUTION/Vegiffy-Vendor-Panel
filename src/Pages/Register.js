@@ -275,7 +275,7 @@ const AddVendorForm = () => {
   '781 SADAR BAZAR BOLARUM SECUNDERABAD TELANGANA 500010',
   'Email id: vendor@Vegiffy.com',
   'Website: www.Vegiffy.com',
-  'Phone no: 9391973675',
+  'Phone no: 9550003140',
   'Helpline: 9391950503',
   '',
   'RESTAURANT PARTNER AGREEMENT',

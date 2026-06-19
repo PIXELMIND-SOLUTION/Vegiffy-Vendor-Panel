@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
-  FiStar, 
-  FiMapPin, 
-  FiMail, 
-  FiPhone, 
+import {
+  FiStar,
+  FiMapPin,
+  FiMail,
+  FiPhone,
   FiCalendar,
   FiEdit3,
   FiDollarSign,
@@ -50,7 +50,7 @@ const VendorProfile = () => {
   const [imagePreview, setImagePreview] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [currentDocument, setCurrentDocument] = useState(null);
-  
+
   // States for document uploads
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState('');
@@ -69,7 +69,7 @@ const VendorProfile = () => {
     try {
       setError('');
       const res = await axios.get(`https://api.vegiffy.in/api/profile/${vendorId}`);
-      
+
       if (res.data?.success) {
         const data = res.data.data;
         setProfileData(data);
@@ -135,7 +135,7 @@ const VendorProfile = () => {
 
     try {
       const formData = new FormData();
-      
+
       Object.keys(editForm).forEach(key => {
         if (editForm[key] !== undefined && editForm[key] !== null) {
           formData.append(key, editForm[key]);
@@ -265,13 +265,13 @@ const VendorProfile = () => {
         await navigator.share({ title: 'Join Veggyfy', text: shareText, url: window.location.origin });
         setShareSuccess('Shared successfully!');
         setTimeout(() => setShareSuccess(''), 3000);
-      } catch (err) {}
+      } catch (err) { }
     } else {
       try {
         await navigator.clipboard.writeText(shareText);
         setShareSuccess('Share message copied to clipboard!');
         setTimeout(() => setShareSuccess(''), 3000);
-      } catch (err) {}
+      } catch (err) { }
     }
   };
 
@@ -296,7 +296,7 @@ const VendorProfile = () => {
   };
 
   const getDocumentIcon = (type) => {
-    switch(type) {
+    switch (type) {
       case 'declarationForm': return <FiFileText className="text-red-600 text-xl" />;
       case 'vendorAgreement': return <FiFile className="text-indigo-600 text-xl" />;
       case 'gstCertificate': return <FiFileText className="text-green-600 text-xl" />;
@@ -308,7 +308,7 @@ const VendorProfile = () => {
   };
 
   const getDocumentBgColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'declarationForm': return 'from-red-50 to-pink-50 border-red-200';
       case 'vendorAgreement': return 'from-indigo-50 to-purple-50 border-indigo-200';
       case 'gstCertificate': return 'from-green-50 to-emerald-50 border-green-200';
@@ -320,7 +320,7 @@ const VendorProfile = () => {
   };
 
   const getDocumentIconBg = (type) => {
-    switch(type) {
+    switch (type) {
       case 'declarationForm': return 'bg-red-100 group-hover:bg-red-200';
       case 'vendorAgreement': return 'bg-indigo-100 group-hover:bg-indigo-200';
       case 'gstCertificate': return 'bg-green-100 group-hover:bg-green-200';
@@ -409,7 +409,7 @@ const VendorProfile = () => {
     if (!data?.url) return null;
     return (
       <div className={`bg-gradient-to-r ${getDocumentBgColor(type)} border ${getDocumentBgColor(type).split(' ')[2]} rounded-xl p-4 text-center hover:shadow-md transition-shadow cursor-pointer group relative`}
-           onClick={() => openDocumentModal({ title, url: data.url, type: title, uploadedAt })}>
+        onClick={() => openDocumentModal({ title, url: data.url, type: title, uploadedAt })}>
         <div className="relative">
           <div className={`w-12 h-12 ${getDocumentIconBg(type)} rounded-full flex items-center justify-center mx-auto mb-3 transition-colors`}>
             {getDocumentIcon(type)}
@@ -417,8 +417,8 @@ const VendorProfile = () => {
           <p className="text-sm font-semibold text-gray-700 mb-1">{title}</p>
           <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mb-2"><FiZoomIn className="text-xs" /> Click to view</div>
           {uploadedAt && <p className="text-xs text-gray-500 mb-2">Uploaded: {formatDate(uploadedAt)}</p>}
-          <button onClick={(e) => { e.stopPropagation(); downloadDocument(data.url, `${title.replace(/\s+/g, '_')}.jpg`); }} 
-                  className="absolute top-0 right-0 p-2 bg-white rounded-full shadow-md hover:shadow-lg hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100" title="Download document">
+          <button onClick={(e) => { e.stopPropagation(); downloadDocument(data.url, `${title.replace(/\s+/g, '_')}.jpg`); }}
+            className="absolute top-0 right-0 p-2 bg-white rounded-full shadow-md hover:shadow-lg hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100" title="Download document">
             <FiDownload className="text-gray-600 text-sm" />
           </button>
         </div>
@@ -460,7 +460,7 @@ const VendorProfile = () => {
       </div>
       <div className="flex justify-end">
         <button onClick={uploadDocuments} disabled={uploadingDocs || (!docFiles.declarationForm && !docFiles.vendorAgreement)}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all duration-300 font-bold">
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all duration-300 font-bold">
           {uploadingDocs ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Uploading...</> : <><FiUpload /> Upload Documents</>}
         </button>
       </div>
@@ -614,7 +614,8 @@ const VendorProfile = () => {
                     <DocumentCard type="gstCertificate" title="GST Certificate" data={profileData.gstCertificate} />
                     <DocumentCard type="fssaiLicense" title="FSSAI License" data={profileData.fssaiLicense} />
                     <DocumentCard type="panCard" title="PAN Card" data={profileData.panCard} />
-                    <DocumentCard type="aadharCard" title="Aadhar Card" data={{ url: profileData.aadharCardFront?.url }} uploadedAt={profileData.aadharCardFront?.uploadedAt} />
+                    <DocumentCard type="aadharCard" title="Aadhar Front Card" data={{ url: profileData.aadharCardFront?.url }} uploadedAt={profileData.aadharCardFront?.uploadedAt} />
+                    <DocumentCard type="aadharCard" title="Aadhar Back Card" data={{ url: profileData.aadharCardBack?.url }} uploadedAt={profileData.aadharCardBack?.uploadedAt} />
                     <DocumentCard type="declarationForm" title="Declaration Form" data={profileData.declarationForm} uploadedAt={profileData.declarationForm?.uploadedAt} />
                     <DocumentCard type="vendorAgreement" title="Vendor Agreement" data={profileData.vendorAgreement} uploadedAt={profileData.vendorAgreement?.uploadedAt} />
                   </div>

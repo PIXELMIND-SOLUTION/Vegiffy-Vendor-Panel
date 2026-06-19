@@ -207,12 +207,12 @@ const PendingBookingList = () => {
     doc.setFontSize(9);
     doc.text(`Order ID: ${booking.bookingId}`, startX, y);
     y += 6;
-    doc.text(`Customer: ${booking.userName}`, startX, y);
-    y += 6;
-    doc.text(`Email: ${booking.originalUserEmail}`, startX, y);
-    y += 6;
-    doc.text(`Phone: ${booking.originalUserPhone}`, startX, y);
-    y += 6;
+    // doc.text(`Customer: ${booking.userName}`, startX, y);
+    // y += 6;
+    // doc.text(`Email: ${booking.originalUserEmail}`, startX, y);
+    // y += 6;
+    // doc.text(`Phone: ${booking.originalUserPhone}`, startX, y);
+    // y += 6;
     doc.text(`Date: ${booking.bookingDateTime}`, startX, y);
     y += 8;
 

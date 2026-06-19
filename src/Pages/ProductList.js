@@ -330,7 +330,7 @@ const ProductList = () => {
       }
 
       if (editingProduct.recommendedItem?.newImage) {
-        formData.append("recommendedImage", editingProduct.recommendedItem.newImage);
+        formData.append("recommendedImages", editingProduct.recommendedItem.newImage);
       }
 
       const response = await axios.put(
